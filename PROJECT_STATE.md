@@ -37,12 +37,13 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
   - Custom optimizers from scratch: SGD, SGD with Momentum, RMSProp, and Adam (`app/ml/from_scratch/optimizers.py`).
   - Learning rate schedulers: StepLR, ExponentialLR, and CosineAnnealingLR.
   - Hardened with input length, tensor shape, parameter dtype/writability, gradient finiteness checks, state consistency, and scheduler rate synchronization.
-  - Reusable 40-feature lexical URL extractor (`app/intelligence/lexical.py`) covering lengths, counts, tokens, Shannon entropy, and brand impersonation cues.
+  - Reusable 40-feature lexical URL extractor (`app/intelligence/lexical.py`) covering lengths, counts, tokens, Shannon entropy, and brand impersonation cues with multi-label Public Suffix List (PSL) parsing via `tldextract` (e.g. `.co.uk`, `.co.in`, IPv4/IPv6, punycode).
   - Zero-leakage standardization preprocessor fitted strictly on training data (`app/intelligence/preprocessing.py`, saved to `models/lexical/preprocessor.json`).
-  - Class-weighted Binary Cross-Entropy loss ($w_0 = 36.962, w_1 = 0.507$) and balanced stratified mini-batch training.
+  - Controlled class imbalance strategy comparison: Strategy A (Balanced Batches + Ordinary BCE, Val Macro F1: 0.5065) vs. Strategy B (Natural Batches + Class-Weighted BCE, Val Macro F1: 0.6450). Selected Strategy B strictly on validation metrics without double-compensation.
+  - Validation/test discrepancy resolved via domain-cluster analysis (accounting for 65.9% Google Docs/Forms concentration in validation) and best-validation-checkpoint restoration at epoch 17 (calibrated $\tau = 0.050$).
   - 3-Layer Lexical MLP (M-01) trained from scratch with Adam and CosineAnnealingLR (`models/lexical/model_weights.npz`).
-  - Validation threshold calibrated at $\tau = 0.100$. Holdout test metrics on 4,257 unseen records across 908 unseen domains: **ROC-AUC: 0.9712, PR-AUC: 0.9993, Macro F1: 0.7421, Phishing F1: 0.9843, Legit Recall: 79.27% (65/82)**. Full report exported to `data/reports/lexical_mlp_evaluation.json`.
-  - **Full test suite: 186 unit tests passing (1 deselected) in ~4.18s**. Zero regressions.
+  - Holdout test metrics on 4,257 unseen records across 908 unseen domains: **ROC-AUC: 0.9773, PR-AUC: 0.9995, Macro F1: 0.8239, Phishing F1: 0.9932, Legit F1: 0.6545, Accuracy: 98.66%**. Full report exported to `data/reports/lexical_mlp_evaluation.json`.
+  - **Full test suite: 191 unit tests passing (1 deselected) in ~4.54s**. Zero regressions.
 
 ---
 

@@ -12,7 +12,7 @@
   - ✅ **Phase 1 & 1.1:** Secure Playwright website scanner, validating egress forward proxy, connection-level IP pinning, and anti-SSRF protections.
   - ✅ **Phase 2:** Multi-source dataset ingestion (PhishTank, OpenPhish, Tranco, PhreshPhish), external visual dataset integration (1,008 screenshots), deduplication (SHA-256 / pHash), annotation toolchain, and domain-aware leakage-safe splits.
   - ✅ **Phase 3:** Neural network mathematical sandbox implemented from scratch (pure NumPy linear algebra, dense layers, activation functions, losses, reverse-mode autodiff computational graph, and finite-difference gradient checking).
-  - ✅ **Phase 4:** Feedforward Deep Neural Network for Lexical Phishing Detection (custom optimizers and schedulers from scratch, 40-feature lexical URL extractor, zero-leakage preprocessor, and 3-Layer Lexical MLP M-01 achieving ROC-AUC: 0.9712, PR-AUC: 0.9993, Macro F1: 0.7421 on unseen holdout domains).
+  - ✅ **Phase 4:** Feedforward Deep Neural Network for Lexical Phishing Detection (custom optimizers and schedulers from scratch, 40-feature lexical URL extractor with multi-label PSL parsing, zero-leakage preprocessor, controlled imbalance mitigation, and 3-Layer Lexical MLP M-01 achieving ROC-AUC: 0.9773, PR-AUC: 0.9995, Macro F1: 0.8239, Phishing F1: 0.9932, Accuracy: 98.66% on unseen holdout domains).
 - **Core Technology Stack:** Python 3.11–3.13, PyTorch 2.6 (CUDA 12.4 compatible), Torchvision, Ultralytics YOLO, FastAPI, Playwright, React, Vite, Tailwind CSS.
 
 ---
@@ -87,7 +87,7 @@ The hermetic test suite runs offline without requiring external network connecti
 ```bash
 pytest -v -m "not integration"
 ```
-*(All 186 unit tests pass in 4.18s, 1 deselected).*
+*(All 191 unit tests pass in 4.54s, 1 deselected).*
 
 To run the complete test suite including integration tests (requires local network loopback for scanner proxy tests):
 ```bash

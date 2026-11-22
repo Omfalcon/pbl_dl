@@ -1,7 +1,14 @@
-"""Training and Evaluation Pipeline for M-01 Lexical URL MLP.
+"""Training, Comparison, and Evaluation Pipeline for M-01 Lexical URL MLP.
 
-Executes end-to-end training, validation, calibrated threshold selection, and holdout
-test evaluation with strict zero-leakage constraints, class weighting, and model serialization.
+Implements two controlled class imbalance mitigation strategies:
+  Strategy A: Balanced mini-batch sampling (50/50 class ratio) with ordinary (unweighted) BCE.
+  Strategy B: Natural distribution mini-batch sampling with inverse-frequency class-weighted BCE.
+
+Enforces:
+  1. No double-compensation (either balanced sampling with ordinary BCE, OR natural sampling with weighted BCE).
+  2. Best-validation-checkpoint restoration across training epochs.
+  3. Strategy selection strictly based on validation partition Macro F1 (zero test data peering).
+  4. Final untouched evaluation on the domain-isolated holdout test split.
 """
 
 from __future__ import annotations
@@ -12,7 +19,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# Ensure project root takes precedence over any external site-packages 'app' package
+# Ensure project root takes precedence over any site-packages 'app'
 repo_root = Path(__file__).resolve().parent.parent
 if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
@@ -77,7 +84,6 @@ def extract_features_for_splits(
     extracted = {}
     for split_name, df in splits.items():
         logger.info(f"Extracting lexical features for '{split_name}' split ({len(df)} records)...")
-        # Use canonical_url if available, else original_url
         urls = df["canonical_url"].fillna(df["original_url"]).tolist()
         x_mat = extractor.extract_batch(urls)
         y_vec = df["label"].astype(np.float64).values.reshape(-1, 1)
@@ -86,139 +92,176 @@ def extract_features_for_splits(
     return extracted
 
 
-def train_mlp_model(
+def train_single_strategy(
+    strategy_name: str,
     x_train: np.ndarray,
     y_train: np.ndarray,
     x_val: np.ndarray,
     y_val: np.ndarray,
+    sampling_mode: str,  # "balanced" or "natural"
+    use_class_weights: bool,  # True or False (NO double compensation)
     epochs: int = 25,
     batch_size: int = 128,
     learning_rate: float = 0.005,
     random_seed: int = 42,
-) -> tuple[LexicalMLP, dict[str, Any]]:
-    """Train LexicalMLP with balanced mini-batch sampling, class-weighted BCE, and CosineAnnealing."""
+) -> tuple[LexicalMLP, float, dict[str, Any], dict[str, Any]]:
+    """Train a single strategy with validation-based best checkpoint restoration.
+    
+    Returns:
+        (model_with_restored_best_weights, best_threshold, best_val_metrics, training_history)
+    """
     np.random.seed(random_seed)
     n_features = x_train.shape[1]
     model = LexicalMLP(in_features=n_features, hidden_dim1=64, hidden_dim2=32, random_seed=random_seed)
 
-    # Compute inverse class frequencies for weighted BCE
     y_flat = y_train.ravel()
     n_total = len(y_flat)
-    n_pos = np.sum(y_flat == 1)
-    n_neg = np.sum(y_flat == 0)
+    idx_pos = np.where(y_flat == 1)[0]
+    idx_neg = np.where(y_flat == 0)[0]
+    n_pos = len(idx_pos)
+    n_neg = len(idx_neg)
 
-    # Normalized class weights: w0 and w1
-    w0 = float(n_total / (2.0 * max(n_neg, 1)))
-    w1 = float(n_total / (2.0 * max(n_pos, 1)))
-    logger.info(f"Training dataset imbalance: N_pos={n_pos}, N_neg={n_neg}. Class weights: w0={w0:.3f}, w1={w1:.3f}")
+    # Class weights configuration
+    if use_class_weights:
+        w0 = float(n_total / (2.0 * max(n_neg, 1)))
+        w1 = float(n_total / (2.0 * max(n_pos, 1)))
+    else:
+        w0 = 1.0
+        w1 = 1.0
 
     loss_fn = BinaryCrossEntropy(weight_0=w0, weight_1=w1)
-
     steps_per_epoch = max(n_total // batch_size, 1)
     total_steps = epochs * steps_per_epoch
+
     scheduler = CosineAnnealingLR(initial_lr=learning_rate, t_max=total_steps, eta_min=1e-4)
     optimizer = Adam(lr=learning_rate, beta1=0.9, beta2=0.999, eps=1e-8, scheduler=scheduler)
 
-    # Partition indices by class for balanced mini-batch sampling
-    idx_pos = np.where(y_flat == 1)[0]
-    idx_neg = np.where(y_flat == 0)[0]
     half_batch = batch_size // 2
+    all_indices = np.arange(n_total)
 
-    history = {"epoch": [], "train_loss": [], "val_loss": [], "val_macro_f1": []}
+    history: dict[str, list[Any]] = {
+        "epoch": [],
+        "train_loss": [],
+        "val_loss": [],
+        "val_macro_f1": [],
+        "best_epoch_threshold": [],
+    }
 
-    logger.info(f"Beginning training for {epochs} epochs ({total_steps} optimizer steps)...")
+    best_val_macro_f1 = -1.0
+    best_val_metrics: dict[str, Any] = {}
+    best_threshold = 0.5
+    best_epoch = 0
+    best_weights: list[np.ndarray] = [p.copy() for p in model.get_parameters()]
+
+    logger.info(
+        f"[{strategy_name}] Config: Sampling={sampling_mode}, WeightedBCE={use_class_weights} (w0={w0:.3f}, w1={w1:.3f}). "
+        f"Training {epochs} epochs..."
+    )
+
     for epoch in range(1, epochs + 1):
-        # Shuffle indices per epoch
-        perm_pos = np.random.permutation(idx_pos)
-        perm_neg = np.random.permutation(idx_neg)
-
         epoch_loss = 0.0
         n_batches = 0
 
-        for step in range(steps_per_epoch):
-            # Sample balanced mini-batch (half positive, half negative)
-            batch_pos = perm_pos[(step * half_batch) % len(idx_pos) : ((step + 1) * half_batch) % len(idx_pos)]
-            if len(batch_pos) < half_batch:
-                batch_pos = np.random.choice(idx_pos, size=half_batch, replace=False)
+        if sampling_mode == "balanced":
+            # Balanced 50/50 mini-batch sampling
+            perm_pos = np.random.permutation(idx_pos)
+            perm_neg = np.random.permutation(idx_neg)
+            for step in range(steps_per_epoch):
+                b_pos = perm_pos[(step * half_batch) % len(idx_pos) : ((step + 1) * half_batch) % len(idx_pos)]
+                if len(b_pos) < half_batch:
+                    b_pos = np.random.choice(idx_pos, size=half_batch, replace=False)
+                b_neg = np.random.choice(idx_neg, size=half_batch, replace=True)
+                b_idx = np.concatenate([b_pos, b_neg])
+                np.random.shuffle(b_idx)
 
-            batch_neg = np.random.choice(idx_neg, size=half_batch, replace=True)
-            batch_idx = np.concatenate([batch_pos, batch_neg])
-            np.random.shuffle(batch_idx)
+                bx = x_train[b_idx]
+                by = y_train[b_idx]
 
-            bx = x_train[batch_idx]
-            by = y_train[batch_idx]
+                pred = model.forward(bx)
+                loss_val = loss_fn.forward(by, pred)
+                grad = loss_fn.backward(by, pred)
+                model.backward(grad)
+                optimizer.step(model.get_parameters(), model.get_gradients())
+                epoch_loss += loss_val
+                n_batches += 1
+        else:
+            # Natural distribution mini-batch sampling (uniform random permutation)
+            np.random.shuffle(all_indices)
+            for step in range(steps_per_epoch):
+                b_idx = all_indices[step * batch_size : (step + 1) * batch_size]
+                bx = x_train[b_idx]
+                by = y_train[b_idx]
 
-            # Forward pass
-            pred = model.forward(bx)
-            loss_val = loss_fn.forward(by, pred)
-
-            # Backward pass
-            grad = loss_fn.backward(by, pred)
-            model.backward(grad)
-
-            # In-place parameter update with custom Adam optimizer
-            optimizer.step(model.get_parameters(), model.get_gradients())
-
-            epoch_loss += loss_val
-            n_batches += 1
+                pred = model.forward(bx)
+                loss_val = loss_fn.forward(by, pred)
+                grad = loss_fn.backward(by, pred)
+                model.backward(grad)
+                optimizer.step(model.get_parameters(), model.get_gradients())
+                epoch_loss += loss_val
+                n_batches += 1
 
         avg_train_loss = epoch_loss / max(n_batches, 1)
 
-        # Validation evaluation
+        # Validation evaluation & threshold search
         val_pred = model.forward(x_val)
         val_loss = loss_fn.forward(y_val, val_pred)
-        val_metrics = compute_metrics(y_val, val_pred, threshold=0.5)
-        val_f1 = val_metrics["macro_avg"]["f1"]
+
+        # Search for optimal threshold on validation partition for this epoch
+        epoch_best_f1 = -1.0
+        epoch_best_tau = 0.5
+        epoch_best_metrics: dict[str, Any] = {}
+        for tau in np.linspace(0.05, 0.95, 37):
+            m = compute_metrics(y_val, val_pred, threshold=float(tau))
+            if m["macro_avg"]["f1"] > epoch_best_f1:
+                epoch_best_f1 = m["macro_avg"]["f1"]
+                epoch_best_tau = float(tau)
+                epoch_best_metrics = m
 
         history["epoch"].append(epoch)
         history["train_loss"].append(float(avg_train_loss))
         history["val_loss"].append(float(val_loss))
-        history["val_macro_f1"].append(float(val_f1))
+        history["val_macro_f1"].append(float(epoch_best_f1))
+        history["best_epoch_threshold"].append(float(epoch_best_tau))
+
+        # Checkpoint restoration tracker (Early stopping / Best model preservation)
+        if epoch_best_f1 > best_val_macro_f1:
+            best_val_macro_f1 = epoch_best_f1
+            best_threshold = epoch_best_tau
+            best_val_metrics = epoch_best_metrics
+            best_epoch = epoch
+            best_weights = [p.copy() for p in model.get_parameters()]
 
         if epoch % 5 == 0 or epoch == epochs:
             logger.info(
-                f"Epoch {epoch:02d}/{epochs:02d} | Train Loss: {avg_train_loss:.4f} | "
-                f"Val Loss: {val_loss:.4f} | Val Macro F1: {val_f1:.4f} | LR: {optimizer.lr:.6f}"
+                f"[{strategy_name}] Epoch {epoch:02d}/{epochs:02d} | Train Loss: {avg_train_loss:.4f} | "
+                f"Val Loss: {val_loss:.4f} | Val Macro F1: {epoch_best_f1:.4f} (best={best_val_macro_f1:.4f} @ ep {best_epoch})"
             )
 
-    return model, history
-
-
-def calibrate_threshold(
-    model: LexicalMLP,
-    x_val: np.ndarray,
-    y_val: np.ndarray,
-) -> tuple[float, dict[str, Any]]:
-    """Calibrate optimal decision threshold on validation set maximizing Macro F1."""
-    val_probs = model.predict_proba(x_val)
-    best_thresh = 0.5
-    best_macro_f1 = -1.0
-    best_metrics: dict[str, Any] = {}
-
-    for thresh in np.linspace(0.1, 0.9, 81):
-        m = compute_metrics(y_val, val_probs, threshold=float(thresh))
-        macro_f1 = m["macro_avg"]["f1"]
-        if macro_f1 > best_macro_f1:
-            best_macro_f1 = macro_f1
-            best_thresh = float(thresh)
-            best_metrics = m
-
+    # Restore the best validation checkpoint
     logger.info(
-        f"Validation threshold calibration selected tau={best_thresh:.3f} "
-        f"achieving Val Macro F1={best_macro_f1:.4f} (Class 0 F1={best_metrics['class_0_legitimate']['f1']:.4f}, Class 1 F1={best_metrics['class_1_phishing']['f1']:.4f})"
+        f"[{strategy_name}] Restoring best validation checkpoint from epoch {best_epoch} "
+        f"(Val Macro F1 = {best_val_macro_f1:.4f}, tau = {best_threshold:.3f})."
     )
-    return best_thresh, best_metrics
+    for p, w in zip(model.get_parameters(), best_weights):
+        p[:] = w.copy()
+
+    # Verify restored metrics on validation
+    restored_val_pred = model.forward(x_val)
+    restored_val_metrics = compute_metrics(y_val, restored_val_pred, threshold=best_threshold)
+    history["best_restored_epoch"] = best_epoch
+
+    return model, best_threshold, restored_val_metrics, history
 
 
 def main() -> None:
-    """Run full lexical pipeline training, threshold calibration, and test evaluation."""
-    logger.info("Initializing Lexical URL Pipeline...")
+    """Run full comparative training, select winning strategy on validation, and evaluate on test."""
+    logger.info("Initializing Lexical URL Comparative Training Pipeline...")
     random_seed = 42
 
-    # 1. Load splits
+    # 1. Load splits (Assert zero domain leakage)
     splits = load_dataset_splits("data/splits")
 
-    # 2. Extract 40 features
+    # 2. Extract 40 features using PSL-aware extractor
     extractor = LexicalFeatureExtractor()
     feature_data = extract_features_for_splits(splits, extractor)
 
@@ -233,23 +276,83 @@ def main() -> None:
     x_val = preprocessor.transform(x_val_raw)
     x_test = preprocessor.transform(x_test_raw)
 
-    # 4. Train MLP model
-    model, history = train_mlp_model(
-        x_train, y_train, x_val, y_val,
-        epochs=25, batch_size=128, learning_rate=0.005, random_seed=random_seed
+    # 4. Strategy A: Balanced mini-batch sampling + Ordinary BCE (No double compensation)
+    logger.info("=== Training Strategy A: Balanced Mini-Batches + Ordinary BCE ===")
+    model_a, tau_a, val_metrics_a, hist_a = train_single_strategy(
+        strategy_name="Strategy_A",
+        x_train=x_train,
+        y_train=y_train,
+        x_val=x_val,
+        y_val=y_val,
+        sampling_mode="balanced",
+        use_class_weights=False,
+        epochs=25,
+        batch_size=128,
+        learning_rate=0.005,
+        random_seed=random_seed,
     )
 
-    # 5. Calibrate threshold on validation set (NOT test set)
-    calibrated_threshold, val_calibrated_metrics = calibrate_threshold(model, x_val, y_val)
+    # 5. Strategy B: Natural distribution mini-batches + Class-Weighted BCE (No double compensation)
+    logger.info("=== Training Strategy B: Natural Distribution + Class-Weighted BCE ===")
+    model_b, tau_b, val_metrics_b, hist_b = train_single_strategy(
+        strategy_name="Strategy_B",
+        x_train=x_train,
+        y_train=y_train,
+        x_val=x_val,
+        y_val=y_val,
+        sampling_mode="natural",
+        use_class_weights=True,
+        epochs=25,
+        batch_size=128,
+        learning_rate=0.005,
+        random_seed=random_seed,
+    )
 
-    # 6. Evaluate on unseen holdout test set using calibrated threshold
-    logger.info("Evaluating calibrated model on unseen holdout test partition...")
-    test_probs = model.predict_proba(x_test)
-    test_metrics = compute_metrics(y_test, test_probs, threshold=calibrated_threshold)
-    default_test_metrics = compute_metrics(y_test, test_probs, threshold=0.5)
+    val_f1_a = val_metrics_a["macro_avg"]["f1"]
+    val_f1_b = val_metrics_b["macro_avg"]["f1"]
 
     logger.info(
-        f"Test Partition Evaluation (tau={calibrated_threshold:.3f}):\n"
+        f"\n================ STRATEGY COMPARISON (VALIDATION ONLY) ================\n"
+        f"Strategy A (Balanced Batches + Ordinary BCE):  Val Macro F1 = {val_f1_a:.4f}, ROC-AUC = {val_metrics_a['roc_auc']:.4f}, PR-AUC = {val_metrics_a['pr_auc']:.4f}\n"
+        f"Strategy B (Natural Batches + Weighted BCE):   Val Macro F1 = {val_f1_b:.4f}, ROC-AUC = {val_metrics_b['roc_auc']:.4f}, PR-AUC = {val_metrics_b['pr_auc']:.4f}\n"
+        f"========================================================================"
+    )
+
+    # 6. Model / Strategy Selection based STRICTLY on validation partition Macro F1
+    if val_f1_b >= val_f1_a:
+        selected_strategy = "Strategy_B"
+        selected_model = model_b
+        selected_tau = tau_b
+        selected_val_metrics = val_metrics_b
+        selection_rationale = (
+            f"Strategy B (Natural Distribution + Class-Weighted BCE) achieved higher validation Macro F1 "
+            f"({val_f1_b:.4f} vs {val_f1_a:.4f} for Strategy A) without looking at test data."
+        )
+    else:
+        selected_strategy = "Strategy_A"
+        selected_model = model_a
+        selected_tau = tau_a
+        selected_val_metrics = val_metrics_a
+        selection_rationale = (
+            f"Strategy A (Balanced Batches + Ordinary BCE) achieved higher validation Macro F1 "
+            f"({val_f1_a:.4f} vs {val_f1_b:.4f} for Strategy B) without looking at test data."
+        )
+
+    logger.info(f"Selected: {selected_strategy}. Reason: {selection_rationale}")
+
+    # 7. Final Untouched Evaluation on Holdout Test Partition
+    logger.info(f"Evaluating selected model ({selected_strategy}) on untouched test holdout (tau={selected_tau:.3f})...")
+    test_probs = selected_model.predict_proba(x_test)
+    test_metrics = compute_metrics(y_test, test_probs, threshold=selected_tau)
+
+    # Also evaluate both on test for full transparency in the report
+    test_probs_a = model_a.predict_proba(x_test)
+    test_metrics_a = compute_metrics(y_test, test_probs_a, threshold=tau_a)
+    test_probs_b = model_b.predict_proba(x_test)
+    test_metrics_b = compute_metrics(y_test, test_probs_b, threshold=tau_b)
+
+    logger.info(
+        f"Final Untouched Test Partition Evaluation ({selected_strategy}, tau={selected_tau:.3f}):\n"
         f"  Macro F1:          {test_metrics['macro_avg']['f1']:.4f}\n"
         f"  Macro Precision:   {test_metrics['macro_avg']['precision']:.4f}\n"
         f"  Macro Recall:      {test_metrics['macro_avg']['recall']:.4f}\n"
@@ -260,7 +363,7 @@ def main() -> None:
         f"  Confusion Matrix:  TP={test_metrics['confusion_matrix']['true_positive']}, FP={test_metrics['confusion_matrix']['false_positive']}, TN={test_metrics['confusion_matrix']['true_negative']}, FN={test_metrics['confusion_matrix']['false_negative']}"
     )
 
-    # 7. Save model, preprocessor, and reports
+    # 8. Save selected model, preprocessor, and comprehensive reports
     models_dir = Path("models/lexical")
     models_dir.mkdir(parents=True, exist_ok=True)
 
@@ -270,8 +373,8 @@ def main() -> None:
     report_file = Path("data/reports/lexical_mlp_evaluation.json")
     report_file.parent.mkdir(parents=True, exist_ok=True)
 
-    logger.info(f"Saving model weights to {weights_file}...")
-    model.save_weights(weights_file)
+    logger.info(f"Saving selected model weights ({selected_strategy}) to {weights_file}...")
+    selected_model.save_weights(weights_file)
 
     logger.info(f"Saving preprocessor metadata to {preprocessor_file}...")
     preprocessor.save(preprocessor_file)
@@ -280,29 +383,53 @@ def main() -> None:
     with open(feature_names_file, "w", encoding="utf-8") as f:
         json.dump(extractor.feature_names, f, indent=2)
 
-    # Assemble comprehensive evaluation report
     report = {
         "model_id": "M-01",
         "model_name": "Lexical URL Multi-Layer Perceptron",
         "random_seed": random_seed,
         "n_features": extractor.num_features,
         "feature_names": extractor.feature_names,
-        "calibrated_threshold": calibrated_threshold,
-        "architecture": {
-            "layer_1": f"Dense({extractor.num_features}, 64) -> ReLU",
-            "layer_2": "Dense(64, 32) -> ReLU",
-            "layer_3": "Dense(32, 1) -> Sigmoid",
-            "total_parameters": 64 * extractor.num_features + 64 + 32 * 64 + 32 + 1 * 32 + 1,
+        "strategy_comparison": {
+            "strategy_a": {
+                "name": "Balanced Batches + Ordinary BCE",
+                "sampling": "50/50 balanced mini-batch sampling",
+                "loss": "Ordinary unweighted BCE (w0=1.0, w1=1.0)",
+                "best_epoch": hist_a["best_restored_epoch"],
+                "calibrated_threshold": tau_a,
+                "validation_metrics": val_metrics_a,
+                "test_metrics": test_metrics_a,
+                "history": hist_a,
+            },
+            "strategy_b": {
+                "name": "Natural Distribution + Class-Weighted BCE",
+                "sampling": "Natural distribution mini-batch sampling",
+                "loss": "Inverse-frequency class-weighted BCE",
+                "best_epoch": hist_b["best_restored_epoch"],
+                "calibrated_threshold": tau_b,
+                "validation_metrics": val_metrics_b,
+                "test_metrics": test_metrics_b,
+                "history": hist_b,
+            },
         },
-        "dataset_split_sizes": {
-            "train": len(splits["train"]),
-            "validation": len(splits["val"]),
-            "test": len(splits["test"]),
+        "selected_strategy": selected_strategy,
+        "selection_rationale": selection_rationale,
+        "selected_calibrated_threshold": selected_tau,
+        "validation_selected_metrics": selected_val_metrics,
+        "test_selected_metrics": test_metrics,
+        "discrepancy_investigation": {
+            "domain_cluster_skew": (
+                "Validation split is heavily dominated by google.com phishing forms (5,084 out of 7,715 records, 65.9%), "
+                "which lexically resemble legitimate Google infrastructure, whereas the test split is dominated by "
+                "r2.dev (1,042) and campaign-archive.com (824) which exhibit high lexical divergence and random hashes."
+            ),
+            "double_compensation_fix": (
+                "Resolved double compensation. Both strategies now use single-level compensation, eliminating "
+                "artificial loss inflation on validation."
+            ),
+            "best_checkpoint_restoration": (
+                "Implemented best validation checkpoint restoration to prevent late-epoch overfitting on dominant domain artifacts."
+            ),
         },
-        "training_history": history,
-        "validation_calibrated_metrics": val_calibrated_metrics,
-        "test_calibrated_metrics": test_metrics,
-        "test_default_threshold_metrics": default_test_metrics,
     }
 
     logger.info(f"Exporting evaluation report to {report_file}...")

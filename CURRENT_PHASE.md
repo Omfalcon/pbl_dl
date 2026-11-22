@@ -31,11 +31,11 @@
 
 | Deliverable | Specification | Implementation File | Verification & Holdout Results | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Lexical Feature Extractor** | 40 engineered numerical features (lengths, tokens, counts, Shannon entropy, brand impersonation flags, ratios) | [`app/intelligence/lexical.py`](app/intelligence/lexical.py) | Verified across normal, IP-based, punycode, unicode, and malformed URLs. Fast vectorized extraction (32k URLs in ~1s). | PASSED |
+| **Lexical Feature Extractor** | 40 engineered numerical features (lengths, tokens, counts, Shannon entropy, brand impersonation flags, ratios) with multi-label PSL parsing (`tldextract`) | [`app/intelligence/lexical.py`](app/intelligence/lexical.py) | Verified across multi-label TLDs (`.co.uk`, `.co.in`), IPv4/IPv6, punycode, brand impersonation, and malformed URLs. Fast vectorized extraction (32k URLs in ~1.3s). | PASSED |
 | **Standardization Preprocessor** | Zero-leakage standardization with outlier clipping | [`app/intelligence/preprocessing.py`](app/intelligence/preprocessing.py) | Fitted strictly on `X_train`. Zero leakage verified on validation and test holdout splits. Saved to `models/lexical/preprocessor.json`. | PASSED |
-| **Weighted BCE Loss** | Cost-sensitive loss balancing extreme class imbalance (1:73) | [`app/ml/from_scratch/losses.py`](app/ml/from_scratch/losses.py) | $w_0 = 36.962, w_1 = 0.507$. Validated analytical gradients and backward propagation. | PASSED |
-| **Lexical MLP (M-01)** | 3-Layer Perceptron: `Dense(40,64) -> ReLU -> Dense(64,32) -> ReLU -> Dense(32,1) -> Sigmoid` | [`app/intelligence/lexical_model.py`](app/intelligence/lexical_model.py) | Trained using custom `Adam` + `CosineAnnealingLR` from scratch. Weights saved to `models/lexical/model_weights.npz`. | PASSED |
-| **Holdout Evaluation** | Unseen domain-isolated test partition (4,257 records across 908 unseen domains) | [`scripts/train_lexical_model.py`](scripts/train_lexical_model.py) | **ROC-AUC: 0.9712**, **PR-AUC: 0.9993**, **Macro F1: 0.7421**, Phishing F1: 0.9843, Legit Recall: 79.27% (65/82). | PASSED |
+| **Imbalance Strategy Comparison** | Controlled evaluation: Strategy A (Balanced Batches + Ordinary BCE) vs Strategy B (Natural Batches + Class-Weighted BCE) | [`scripts/train_lexical_model.py`](scripts/train_lexical_model.py) | No double-compensation. Selected Strategy B strictly on validation metrics (Val Macro F1: 0.6450 vs 0.5065). | PASSED |
+| **Lexical MLP (M-01)** | 3-Layer Perceptron: `Dense(40,64) -> ReLU -> Dense(64,32) -> ReLU -> Dense(32,1) -> Sigmoid` | [`app/intelligence/lexical_model.py`](app/intelligence/lexical_model.py) | Trained using custom `Adam` + `CosineAnnealingLR` with best-validation-checkpoint restoration (restored epoch 17, $\tau=0.050$). Weights saved to `models/lexical/model_weights.npz`. | PASSED |
+| **Holdout Evaluation** | Unseen domain-isolated test partition (4,257 records across 908 unseen domains) | [`scripts/train_lexical_model.py`](scripts/train_lexical_model.py) | **ROC-AUC: 0.9773**, **PR-AUC: 0.9995**, **Macro F1: 0.8239**, Phishing F1: 0.9932, Legit F1: 0.6545, Accuracy: 98.66%. Full report in `data/reports/lexical_mlp_evaluation.json`. | PASSED |
 
 ---
 
@@ -43,7 +43,9 @@
 
 - [x] **No PyTorch Optimizers:** All 4 optimizers, 3 schedulers, and the MLP training pipeline built from scratch using NumPy.
 - [x] **Hardened Optimizer Safety:** Input length, tensor shape, parameter dtype/writability, gradient finiteness, and synchronized scheduler learning rates validated.
-- [x] **Strict Zero Leakage:** Preprocessor fitted on training split only; threshold calibrated on validation split only; final metrics measured on holdout test partition.
+- [x] **No Imbalance Double-Compensation:** Evaluated Strategy A and Strategy B without combining balanced sampling with weighted BCE.
+- [x] **Strict Zero Leakage:** Preprocessor fitted on training split only; strategy selection and threshold calibration on validation split only; final metrics measured on holdout test partition.
+- [x] **Domain Cluster & Discrepancy Audited:** Explained validation skew (65.9% Google Docs/Forms PhishTank records) vs test split distribution.
 - [x] **Robust Metrics Reported:** Full confusion matrix, per-class metrics, Macro Precision/Recall/F1, ROC-AUC, and PR-AUC reported (not just accuracy).
-- [x] **Comprehensive Testing:** 186 unit tests passing in 4.18s (1 deselected).
+- [x] **Comprehensive Testing:** 191 unit tests passing in 4.54s (1 deselected).
 - [x] **No Scope Bleed:** ResNet, YOLO, Siamese CNN, and Transformer models remain isolated for later phases.

@@ -14,10 +14,11 @@ import urllib.parse
 from collections import Counter
 from typing import Any
 import numpy as np
+import tldextract
 
 # Top targeted brands for brand-in-subdomain/path impersonation detection
 MONITORED_TARGET_BRANDS = {
-    "paypal": ["paypal.com", "paypal-community.com"],
+    "paypal": ["paypal.com", "paypal-community.com", "paypal.co.uk", "paypal.me"],
     "apple": ["apple.com", "icloud.com"],
     "microsoft": ["microsoft.com", "live.com", "office.com", "office365.com"],
     "google": ["google.com", "accounts.google.com", "youtube.com", "gmail.com"],
@@ -34,7 +35,7 @@ MONITORED_TARGET_BRANDS = {
     "linkedin": ["linkedin.com"],
     "adobe": ["adobe.com"],
     "sbi": ["sbi.co.in", "onlinesbi.sbi", "onlinesbi.com"],
-    "hdfc": ["hdfcbank.com"],
+    "hdfc": ["hdfcbank.com", "hdfc.com"],
 }
 
 # Suspicious keywords frequently observed in phishing lure paths/queries
@@ -155,9 +156,10 @@ class LexicalFeatureExtractor:
         "letter_ratio_url",
     ]
 
-    def __init__(self) -> None:
+    def __init__(self, cache_dir: str = "data/cache/tldextract") -> None:
         self.feature_names = list(self.FEATURE_NAMES)
         self.num_features = len(self.feature_names)
+        self._tld_extractor = tldextract.TLDExtract(cache_dir=cache_dir, suffix_list_urls=())
 
     @staticmethod
     def _is_ip_address(host: str) -> bool:
@@ -171,17 +173,17 @@ class LexicalFeatureExtractor:
         except ValueError:
             return False
 
-    @staticmethod
-    def _parse_url(url: str) -> tuple[str, str, str, str, str, int | None]:
-        """Safely parse URL into (scheme, hostname, domain, tld, path, port).
+    def _parse_url(self, url: str) -> tuple[str, str, str, str, str, str, int | None]:
+        """Safely parse URL into (scheme, hostname, domain, tld, subdomain, path, port).
         
-        Handles missing schemes, malformed authorities, and leading/trailing whitespace.
+        Reuses Public Suffix List parsing for accurate multi-label TLD handling
+        (e.g. co.uk, co.in) while remaining robust against IP literals and malformed inputs.
         """
         if not isinstance(url, str):
             url = str(url) if url is not None else ""
         url = url.strip()
         if not url:
-            return "", "", "", "", "", None
+            return "", "", "", "", "", "", None
 
         # Ensure scheme for urllib parsing
         if not re.match(r"^[a-zA-Z][a-zA-Z0-9+\-.]*://", url):
@@ -196,34 +198,53 @@ class LexicalFeatureExtractor:
             path = parsed.path
             query = parsed.query
         except Exception:
-            return "", "", "", "", "", None
+            return "", "", "", "", "", "", None
 
-        # Extract port if present
+        # Handle userinfo if present
+        if "@" in netloc:
+            _, netloc = netloc.rsplit("@", 1)
+
+        # Extract port and hostname (including IPv6 bracket handling)
         port = None
-        if ":" in netloc and not netloc.endswith("]"):
-            parts = netloc.rsplit(":", 1)
+        hostname = netloc
+        if netloc.startswith("["):
+            bracket_end = netloc.find("]")
+            if bracket_end != -1:
+                hostname = netloc[: bracket_end + 1]
+                rest = netloc[bracket_end + 1 :]
+                if rest.startswith(":"):
+                    try:
+                        port = int(rest[1:])
+                    except ValueError:
+                        port = None
+        elif ":" in netloc:
+            parts = netloc.split(":")
+            hostname = parts[0]
             try:
                 port = int(parts[1])
-                netloc = parts[0]
             except ValueError:
                 port = None
 
-        hostname = netloc.strip("[]")
+        hostname = hostname.strip("[]")
 
-        # Extract domain, subdomain, tld via simple reliable suffix matching
-        # (avoiding heavy network lookups in fast path)
-        host_parts = hostname.split(".")
-        if len(host_parts) >= 2:
-            tld = host_parts[-1]
-            domain = host_parts[-2] + "." + tld
-        elif len(host_parts) == 1:
+        # Handle IP addresses vs PSL domain extraction
+        if self._is_ip_address(hostname):
+            domain = hostname
             tld = ""
-            domain = host_parts[0]
+            subdomain = ""
         else:
-            tld = ""
-            domain = ""
+            ext = self._tld_extractor(hostname)
+            top_domain = getattr(ext, "top_domain_under_public_suffix", "")
+            if top_domain:
+                domain = top_domain
+            else:
+                d = getattr(ext, "domain", "")
+                s = getattr(ext, "suffix", "")
+                domain = f"{d}.{s}" if d and s else (d or hostname)
+            tld = getattr(ext, "suffix", "")
+            subdomain = getattr(ext, "subdomain", "")
 
-        return scheme, hostname, domain, tld, path, port
+        return scheme, hostname, domain, tld, subdomain, path, port
 
     def extract_features(self, url: str) -> dict[str, float]:
         """Extract a dictionary of named lexical features from a URL."""
@@ -248,22 +269,15 @@ class LexicalFeatureExtractor:
         num_percent = float(url.count("%"))
         num_ampersands = float(url.count("&"))
 
-        # Parsing
-        scheme, hostname, domain, tld, path, port = self._parse_url(url)
+        # Parsing via PSL
+        scheme, hostname, domain, tld, subdomain, path, port = self._parse_url(url)
         host_len = float(len(hostname))
         num_dots_host = float(hostname.count("."))
 
-        # Subdomain analysis
-        host_labels = hostname.split(".") if hostname else []
-        if len(host_labels) > 2:
-            subdomain_labels = host_labels[:-2]
-            num_subdomains = float(len(subdomain_labels))
-            subdomain_str = ".".join(subdomain_labels)
-            subdomain_len = float(len(subdomain_str))
-        else:
-            num_subdomains = 0.0
-            subdomain_str = ""
-            subdomain_len = 0.0
+        # Subdomain analysis from PSL parsed subdomain
+        subdomain_labels = [s for s in subdomain.split(".") if s]
+        num_subdomains = float(len(subdomain_labels))
+        subdomain_len = float(len(subdomain))
 
         has_ip = 1.0 if self._is_ip_address(hostname) else 0.0
         is_punycode = 1.0 if "xn--" in hostname else 0.0
@@ -320,8 +334,8 @@ class LexicalFeatureExtractor:
             if brand_name in url_lower:
                 count_brand_keywords += 1.0
                 # Check if brand appears in subdomain or path while domain is not official
-                is_official = any(off_d in domain for off_d in official_domains)
-                in_sub_or_path = (brand_name in subdomain_str.lower()) or (brand_name in path_lower)
+                is_official = any(domain == off_d or domain.endswith("." + off_d) for off_d in official_domains)
+                in_sub_or_path = (brand_name in subdomain.lower()) or (brand_name in path_lower)
                 if in_sub_or_path and not is_official:
                     brand_impersonation_flag = 1.0
 
