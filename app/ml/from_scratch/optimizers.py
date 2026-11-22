@@ -56,17 +56,31 @@ class LRScheduler(ABC):
         self.current_lr = self.get_lr(self.step_count)
         return self.current_lr
 
+    def set_lr(self, new_lr: float) -> None:
+        """Manually update learning rate and re-anchor schedule baseline.
+
+        Updates current_lr and initial_lr to new_lr and resets step_count to 0,
+        ensuring future scheduler steps decay from the updated baseline rate.
+        """
+        if new_lr <= 0.0 or not math.isfinite(new_lr):
+            raise ValueError(f"Learning rate must be positive and finite; got {new_lr}")
+        self.initial_lr = float(new_lr)
+        self.current_lr = float(new_lr)
+        self.step_count = 0
+
 
 class StepLR(LRScheduler):
     """Decays the learning rate by gamma every step_size epochs/steps."""
 
     def __init__(self, initial_lr: float, step_size: int, gamma: float = 0.1) -> None:
         super().__init__(initial_lr)
+        if isinstance(step_size, bool) or not isinstance(step_size, (int, np.integer)):
+            raise TypeError(f"step_size must be an integer; got {type(step_size).__name__}")
         if step_size <= 0:
             raise ValueError(f"step_size must be positive integer; got {step_size}")
         if not (0.0 < gamma <= 1.0) or not math.isfinite(gamma):
             raise ValueError(f"gamma must be in (0, 1]; got {gamma}")
-        self.step_size = step_size
+        self.step_size = int(step_size)
         self.gamma = float(gamma)
 
     def get_lr(self, step: int) -> float:
@@ -92,14 +106,25 @@ class CosineAnnealingLR(LRScheduler):
 
     def __init__(self, initial_lr: float, t_max: int, eta_min: float = 0.0) -> None:
         super().__init__(initial_lr)
+        if isinstance(t_max, bool) or not isinstance(t_max, (int, np.integer)):
+            raise TypeError(f"t_max must be an integer; got {type(t_max).__name__}")
         if t_max <= 0:
             raise ValueError(f"t_max must be positive integer; got {t_max}")
         if eta_min < 0.0 or not math.isfinite(eta_min):
             raise ValueError(f"eta_min must be non-negative and finite; got {eta_min}")
         if eta_min > initial_lr:
             raise ValueError(f"eta_min ({eta_min}) cannot exceed initial_lr ({initial_lr})")
-        self.t_max = t_max
+        self.t_max = int(t_max)
         self.eta_min = float(eta_min)
+
+    def set_lr(self, new_lr: float) -> None:
+        if new_lr <= 0.0 or not math.isfinite(new_lr):
+            raise ValueError(f"Learning rate must be positive and finite; got {new_lr}")
+        if self.eta_min > new_lr:
+            raise ValueError(
+                f"Cannot set learning rate ({new_lr}) below CosineAnnealingLR eta_min ({self.eta_min})"
+            )
+        super().set_lr(new_lr)
 
     def get_lr(self, step: int) -> float:
         if step >= self.t_max:
@@ -144,7 +169,7 @@ class Optimizer(ABC):
             raise ValueError(f"Learning rate must be positive and finite; got {value}")
         self._lr = float(value)
         if self.scheduler is not None:
-            self.scheduler.current_lr = self._lr
+            self.scheduler.set_lr(self._lr)
 
     def update_lr(self) -> float:
         """Advance scheduler and synchronize learning rate."""
@@ -155,7 +180,8 @@ class Optimizer(ABC):
     def validate_inputs(self, params: list[np.ndarray], grads: list[np.ndarray]) -> None:
         """Validate parameter and gradient list lengths, shapes, and finite values.
 
-        Prevents silent parameter skips through zip truncation.
+        Prevents silent parameter skips through zip truncation and ensures
+        all inputs are strictly finite before any mutation occurs.
         """
         if len(params) != len(grads):
             raise ValueError(
@@ -167,6 +193,10 @@ class Optimizer(ABC):
             if p.shape != g.shape:
                 raise ValueError(
                     f"Shape mismatch at index {idx}: parameter shape {p.shape} != gradient shape {g.shape}"
+                )
+            if not np.all(np.isfinite(p)):
+                raise ValueError(
+                    f"Non-finite parameter (NaN or Inf) detected at parameter index {idx}"
                 )
             if not np.all(np.isfinite(g)):
                 raise ValueError(

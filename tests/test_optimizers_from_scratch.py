@@ -212,10 +212,22 @@ class TestOptimizerHardeningAndEdgeCases:
         # Invalid Schedulers
         with pytest.raises(ValueError, match="step_size must be positive"):
             StepLR(initial_lr=0.1, step_size=0)
+        with pytest.raises(ValueError, match="step_size must be positive"):
+            StepLR(initial_lr=0.1, step_size=-2)
+        with pytest.raises(TypeError, match="step_size must be an integer"):
+            StepLR(initial_lr=0.1, step_size=2.5)
+        with pytest.raises(TypeError, match="step_size must be an integer"):
+            StepLR(initial_lr=0.1, step_size=True)
         with pytest.raises(ValueError, match="gamma must be in \\(0, 1\\]"):
             ExponentialLR(initial_lr=0.1, gamma=0.0)
         with pytest.raises(ValueError, match="t_max must be positive"):
             CosineAnnealingLR(initial_lr=0.1, t_max=0)
+        with pytest.raises(ValueError, match="t_max must be positive"):
+            CosineAnnealingLR(initial_lr=0.1, t_max=-5)
+        with pytest.raises(TypeError, match="t_max must be an integer"):
+            CosineAnnealingLR(initial_lr=0.1, t_max=10.5)
+        with pytest.raises(TypeError, match="t_max must be an integer"):
+            CosineAnnealingLR(initial_lr=0.1, t_max=False)
         with pytest.raises(ValueError, match="eta_min must be non-negative"):
             CosineAnnealingLR(initial_lr=0.1, t_max=10, eta_min=-0.01)
 
@@ -247,6 +259,45 @@ class TestOptimizerHardeningAndEdgeCases:
         # Inf rejection
         with pytest.raises(ValueError, match="Non-finite gradient"):
             opt.step([p], [np.array([np.inf, 0.5])])
+
+    def test_non_finite_parameters_rejected(self):
+        # NaN parameter rejection across all 4 optimizers
+        for opt_cls in [SGD, SGDMomentum, RMSProp, Adam]:
+            opt = opt_cls()
+            with pytest.raises(ValueError, match="Non-finite parameter"):
+                opt.step([np.array([1.0, np.nan])], [np.array([0.1, 0.2])])
+
+            with pytest.raises(ValueError, match="Non-finite parameter"):
+                opt.step([np.array([np.inf, 2.0])], [np.array([0.1, 0.2])])
+
+            with pytest.raises(ValueError, match="Non-finite parameter"):
+                opt.step([np.array([-np.inf, 2.0])], [np.array([0.1, 0.2])])
+
+    def test_invalid_inputs_do_not_partially_mutate_state_or_params(self):
+        p1 = np.array([10.0, 20.0], dtype=np.float64)
+        p1_copy = p1.copy()
+        p2_bad = np.array([30.0, np.nan], dtype=np.float64)
+        g1 = np.array([1.0, 1.0], dtype=np.float64)
+        g2 = np.array([1.0, 1.0], dtype=np.float64)
+
+        opt = SGDMomentum(lr=0.1, momentum=0.9)
+
+        # Finiteness failure on parameter 2 must not touch parameter 1 or state
+        with pytest.raises(ValueError, match="Non-finite parameter"):
+            opt.step([p1, p2_bad], [g1, g2])
+
+        assert np.array_equal(p1, p1_copy), "Parameter p1 was mutated despite validation error"
+        assert opt.t == 0, "Optimizer iteration counter incremented on failed step"
+        assert len(opt.velocities) == 0, "Optimizer state created on failed step"
+
+        # Shape mismatch on parameter 2 must also not mutate parameter 1
+        p2_wrong_shape = np.array([30.0], dtype=np.float64)
+        g2_wrong_shape = np.array([1.0, 2.0], dtype=np.float64)
+        with pytest.raises(ValueError, match="Shape mismatch at index 1"):
+            opt.step([p1, p2_wrong_shape], [g1, g2_wrong_shape])
+
+        assert np.array_equal(p1, p1_copy), "Parameter p1 was mutated on shape mismatch"
+        assert opt.t == 0
 
     def test_optimizer_state_consistency_on_param_structure_change(self):
         p1 = np.array([1.0, 2.0])
@@ -281,17 +332,52 @@ class TestOptimizerHardeningAndEdgeCases:
         p = np.array([1.0])
         g = np.array([0.5])
 
-        # Step 1 -> count=1, lr=0.1
+        # Step 1 -> count=1, lr remains 0.1
         opt.step([p], [g])
         assert opt.lr == 0.1
         assert sched.current_lr == 0.1
 
-        # Step 2 -> count=2, step_size reached -> lr=0.05
+        # Step 2 -> count=2, step_size reached -> lr decays to 0.05
         opt.step([p], [g])
         assert opt.lr == 0.05
         assert sched.current_lr == 0.05
 
-        # Manual setter synchronization
+        # Manual setter synchronization & re-anchoring regression test
         opt.lr = 0.02
         assert opt.lr == 0.02
         assert sched.current_lr == 0.02
+        assert sched.initial_lr == 0.02
+        assert sched.step_count == 0
+
+        # Next step must use the new 0.02 rate and NOT revert to old rate (0.1 or 0.05)
+        p_val_before = p.copy()
+        opt.step([p], [g])
+        # param update = p - 0.02 * 0.5 = p - 0.01
+        assert np.isclose(p[0], p_val_before[0] - 0.02 * 0.5)
+        # Sched step_count is now 1 (step_size=2), so current_lr remains 0.02
+        assert opt.lr == 0.02
+        assert sched.current_lr == 0.02
+
+        # Step 2 of re-anchored schedule: step_count reaches 2 -> decays to 0.02 * 0.5 = 0.01
+        opt.step([p], [g])
+        assert opt.lr == 0.01
+        assert sched.current_lr == 0.01
+
+    def test_cosine_annealing_manual_lr_rebasing(self):
+        sched = CosineAnnealingLR(initial_lr=0.1, t_max=10, eta_min=0.001)
+        opt = SGD(lr=0.1, scheduler=sched)
+
+        p = np.array([1.0])
+        g = np.array([0.2])
+        opt.step([p], [g])
+
+        # Manually reassign lr to 0.04
+        opt.lr = 0.04
+        assert opt.lr == 0.04
+        assert sched.initial_lr == 0.04
+        assert sched.current_lr == 0.04
+        assert sched.step_count == 0
+
+        # Cannot set lr below eta_min
+        with pytest.raises(ValueError, match="Cannot set learning rate .* below .* eta_min"):
+            opt.lr = 0.0005
