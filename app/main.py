@@ -7,6 +7,7 @@ FastAPI Application Entry Point.
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -21,6 +22,41 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger("phishvision.main")
+
+# Safe local development CORS defaults
+DEFAULT_DEV_CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
+
+def resolve_cors_configuration() -> tuple[list[str], bool]:
+    """Resolve CORS origins and credentials flag from environment or safe local defaults.
+
+    Production Configuration:
+        Set `PHISHVISION_CORS_ORIGINS` to a comma-separated string of trusted frontend origins:
+        e.g. `PHISHVISION_CORS_ORIGINS=https://portal.domain.com,https://dashboard.domain.com`
+
+    Security Constraint:
+        Wildcard `*` combined with `allow_credentials=True` is prohibited by the Fetch/CORS
+        specifications and represents a credential leakage vulnerability. If wildcard is
+        configured, credentials are automatically disabled.
+    """
+    raw_env = os.getenv("PHISHVISION_CORS_ORIGINS", "").strip()
+    if not raw_env:
+        return DEFAULT_DEV_CORS_ORIGINS, True
+
+    origins = [orig.strip() for orig in raw_env.split(",") if orig.strip()]
+    if "*" in origins:
+        logger.warning(
+            "CORS configured with wildcard '*'. Disabling allow_credentials to comply with security standards."
+        )
+        return ["*"], False
+    return origins, True
 
 
 @asynccontextmanager
@@ -53,11 +89,12 @@ app = FastAPI(
 )
 
 # Cross-Origin Resource Sharing (CORS) Middleware
+cors_origins, allow_credentials = resolve_cors_configuration()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=cors_origins,
+    allow_credentials=allow_credentials,
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 

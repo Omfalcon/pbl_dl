@@ -149,3 +149,152 @@ class TestPhishVisionAPI:
         assert data["target_url"] == target_url
         assert data["registrable_domain"] == "titanvault-portal.net"
         assert "url_intelligence" in data
+
+    def test_scan_lifecycle_initialization_failure_reaches_terminal_failed(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verify that pipeline initialization failure transitions scan to terminal FAILED state."""
+        import app.api.v1.endpoints as endpoints_mod
+
+        def fail_get_pipeline():
+            raise RuntimeError("Simulated pipeline initialization error")
+
+        monkeypatch.setattr(endpoints_mod, "get_pipeline", fail_get_pipeline)
+
+        submit_res = client.post(
+            "/api/v1/scan",
+            json={"url": "https://example.com/test", "options": {"fast_mode": True}},
+        )
+        assert submit_res.status_code == 202
+        scan_id = submit_res.json()["scan_id"]
+
+        # Poll until terminal state
+        terminal_status = None
+        for _ in range(30):
+            status_res = client.get(f"/api/v1/scan/{scan_id}")
+            assert status_res.status_code == 200
+            s_val = status_res.json()["status"]
+            if s_val in ("FAILED", "COMPLETED", "BLOCKED_SSRF"):
+                terminal_status = s_val
+                break
+            time.sleep(0.1)
+
+        assert terminal_status == "FAILED"
+
+        # Verify report returns 500 indicating the recorded failure
+        report_res = client.get(f"/api/v1/scan/{scan_id}/report")
+        assert report_res.status_code == 500
+        assert "Simulated pipeline initialization error" in report_res.json()["message"]
+
+    def test_cors_resolution_security(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verify CORS resolution enforces safe defaults and prevents wildcard credentials."""
+        from app.main import resolve_cors_configuration
+
+        # Default configuration
+        monkeypatch.delenv("PHISHVISION_CORS_ORIGINS", raising=False)
+        origins, allow_creds = resolve_cors_configuration()
+        assert "http://localhost:3000" in origins
+        assert "http://localhost:5173" in origins
+        assert allow_creds is True
+        assert "*" not in origins
+
+        # Wildcard should automatically disable credentials
+        monkeypatch.setenv("PHISHVISION_CORS_ORIGINS", "*")
+        origins, allow_creds = resolve_cors_configuration()
+        assert origins == ["*"]
+        assert allow_creds is False
+
+        # Custom explicit origins
+        monkeypatch.setenv("PHISHVISION_CORS_ORIGINS", "https://app.phishvision.local,https://portal.phishvision.local")
+        origins, allow_creds = resolve_cors_configuration()
+        assert origins == ["https://app.phishvision.local", "https://portal.phishvision.local"]
+        assert allow_creds is True
+
+    def test_image_upload_security_protections(self, client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verify upload size limits, format validation, and malformed payload protections."""
+        import io
+        from PIL import Image
+
+        # 1. Empty file
+        empty_upload = {"image": ("empty.png", b"", "image/png")}
+        res = client.post("/api/v1/analyze/brand-similarity", files=empty_upload)
+        assert res.status_code == 400
+        assert res.json()["error_code"] == "EMPTY_PAYLOAD"
+
+        # 2. Oversized payload (simulate 1 KB limit)
+        monkeypatch.setenv("PHISHVISION_MAX_UPLOAD_BYTES", "1024")
+        oversized_data = b"X" * 2048
+        res = client.post(
+            "/api/v1/analyze/brand-similarity",
+            files={"image": ("big.png", oversized_data, "image/png")},
+        )
+        assert res.status_code == 413
+        assert res.json()["error_code"] == "PAYLOAD_TOO_LARGE"
+
+        # Reset upload limit
+        monkeypatch.delenv("PHISHVISION_MAX_UPLOAD_BYTES", raising=False)
+
+        # 3. Malformed image bytes
+        malformed_bytes = b"not-a-real-png-or-jpeg-image-bytes"
+        res = client.post(
+            "/api/v1/analyze/brand-similarity",
+            files={"image": ("fake.png", malformed_bytes, "image/png")},
+        )
+        assert res.status_code == 400
+        assert res.json()["error_code"] == "INVALID_IMAGE_PAYLOAD"
+
+        # 4. Valid image format and dimensions (small 32x32 PNG)
+        img = Image.new("RGB", (32, 32), color=(255, 0, 0))
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        valid_bytes = buf.getvalue()
+
+        res = client.post(
+            "/api/v1/analyze/brand-similarity",
+            files={"image": ("logo.png", valid_bytes, "image/png")},
+            data={"target_domain": "google.com"},
+        )
+        # Should either succeed (200) or report M-03 not loaded (503), but not 400 or 413
+        assert res.status_code in (200, 503)
+
+    def test_health_check_status_levels(self, client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verify health check returns OPERATIONAL (7/7), DEGRADED (1-6), and SERVICE_UNAVAILABLE (0)."""
+        import app.api.v1.endpoints as endpoints_mod
+
+        class MockPipeline:
+            device = "cpu"
+            def __init__(self, loaded_count: int):
+                self.loaded_count = loaded_count
+            def get_checkpoint_status(self):
+                models = {}
+                for i in range(7):
+                    key = f"M-0{i+1}"
+                    status_val = "LOADED" if i < self.loaded_count else "MISSING"
+                    models[key] = {"status": status_val, "weights_exist": i < self.loaded_count}
+                return models
+
+        # All 7 loaded -> OPERATIONAL (200)
+        monkeypatch.setattr(endpoints_mod, "get_pipeline", lambda: MockPipeline(7))
+        res = client.get("/api/v1/health")
+        assert res.status_code == 200
+        assert res.json()["status"] == "OPERATIONAL"
+
+        # 4 loaded -> DEGRADED (200)
+        monkeypatch.setattr(endpoints_mod, "get_pipeline", lambda: MockPipeline(4))
+        res = client.get("/api/v1/health")
+        assert res.status_code == 200
+        assert res.json()["status"] == "DEGRADED"
+
+        # 0 loaded -> SERVICE_UNAVAILABLE (503)
+        monkeypatch.setattr(endpoints_mod, "get_pipeline", lambda: MockPipeline(0))
+        res = client.get("/api/v1/health")
+        assert res.status_code == 503
+        assert res.json()["status"] == "SERVICE_UNAVAILABLE"
+
+        # Pipeline init throws -> SERVICE_UNAVAILABLE (503)
+        def broken_pipeline():
+            raise RuntimeError("Fatal hardware failure")
+        monkeypatch.setattr(endpoints_mod, "get_pipeline", broken_pipeline)
+        res = client.get("/api/v1/health")
+        assert res.status_code == 503
+        assert res.json()["status"] == "SERVICE_UNAVAILABLE"

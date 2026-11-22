@@ -14,8 +14,10 @@ Implements the official API contracts specified in API_CONTRACTS.md:
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import logging
+import os
 import time
 import uuid
 from datetime import datetime, timezone
@@ -69,7 +71,24 @@ def get_pipeline() -> UnifiedPhishingPipeline:
 
 
 class ScanStore:
-    """In-memory thread-safe store for ongoing and completed scan records."""
+    """In-memory thread-safe store for ongoing and completed scan records.
+
+    LIMITATION & HORIZONTAL SCALING NOTE:
+    This store maintains scan state in the process-local memory of a single Python
+    runtime. In a multi-worker server deployment (e.g., Uvicorn with multiple workers)
+    or across multiple container instances / Kubernetes pods, scan records created
+    in one process are not visible to other processes.
+
+    PRODUCTION ARCHITECTURE RECOMMENDATION:
+    For distributed or multi-worker production clusters:
+    1. Scan Record Store: Replace ScanStore with an external ACID datastore or
+       distributed cache (e.g., PostgreSQL or Redis with persistence).
+    2. Asynchronous Job Processing: Decouple scans from FastAPI BackgroundTasks
+       using a distributed queue (e.g., Celery, ARQ, or Redis Streams).
+    3. Artifact & Screenshot Storage: Store screenshots and visual previews in
+       shared object storage (e.g., AWS S3, Google Cloud Storage, or MinIO)
+       instead of process-local temporary directories.
+    """
 
     def __init__(self) -> None:
         self._scans: dict[str, dict[str, Any]] = {}
@@ -131,6 +150,13 @@ def _sanitize_report_paths(raw_report: dict[str, Any], scan_id: str) -> dict[str
     return report
 
 
+# Image safety and upload boundary constraints
+DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB default ceiling
+MAX_IMAGE_DIMENSION = 4096  # Maximum width or height in pixels
+MAX_IMAGE_PIXELS = 16_000_000  # Pillow decompression bomb protection threshold (~16 Megapixels)
+ALLOWED_IMAGE_FORMATS = {"PNG", "JPEG", "JPG", "WEBP", "BMP"}
+
+
 async def _run_scan_job(
     scan_id: str,
     target_url: str,
@@ -140,10 +166,11 @@ async def _run_scan_job(
     timeout_seconds: int,
 ) -> None:
     """Asynchronous background task to execute scanning and ML forensic analysis."""
-    pipeline = get_pipeline()
     t0 = time.perf_counter()
 
     try:
+        pipeline = get_pipeline()
+
         if fast_mode:
             # Fast lexical/sequence analysis path (no browser rendering)
             target_domain = _get_registrable_domain(target_url)
@@ -209,7 +236,7 @@ async def _run_scan_job(
         )
 
         elapsed = round(time.perf_counter() - t0, 3)
-        final_status = "COMPLETED" if scan_result.status == ScanStatus.COMPLETED else scan_result.status.value
+        final_status = "COMPLETED" if scan_result.status == ScanStatus.COMPLETED else "FAILED"
 
         scan_report = _build_scan_report_schema(
             scan_id=scan_id,
@@ -560,17 +587,40 @@ async def list_monitored_brands() -> Any:
 @router.get("/health", response_model=HealthStatusResponse)
 async def health_check() -> Any:
     """Check system health, compute device, and explicit per-model checkpoint status."""
-    pipeline = get_pipeline()
-    checkpoint_status = pipeline.get_checkpoint_status()
+    try:
+        pipeline = get_pipeline()
+        checkpoint_status = pipeline.get_checkpoint_status()
+        device_str = str(pipeline.device)
+    except Exception as e:
+        logger.error(f"Failed to inspect pipeline health: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "status": "SERVICE_UNAVAILABLE",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "device": "unknown",
+                "models": {},
+                "active_scans_in_memory": await scan_store.count(),
+                "error": str(e),
+            },
+        )
+
+    total_models = len(checkpoint_status)
     loaded_count = sum(1 for m in checkpoint_status.values() if m["status"] == "LOADED")
 
-    overall_status = "OPERATIONAL" if loaded_count >= 5 else ("DEGRADED" if loaded_count > 0 else "SERVICE_UNAVAILABLE")
+    if total_models > 0 and loaded_count == total_models:
+        overall_status = "OPERATIONAL"
+    elif loaded_count > 0:
+        overall_status = "DEGRADED"
+    else:
+        overall_status = "SERVICE_UNAVAILABLE"
+
     http_code = status.HTTP_200_OK if loaded_count > 0 else status.HTTP_503_SERVICE_UNAVAILABLE
 
     content = {
         "status": overall_status,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "device": str(pipeline.device),
+        "device": device_str,
         "models": checkpoint_status,
         "active_scans_in_memory": await scan_store.count(),
     }
@@ -610,7 +660,7 @@ async def analyze_brand_similarity(
     image: UploadFile = File(...),
     target_domain: str = "",
 ) -> Any:
-    """Compare an uploaded image/logo against reference brands via Siamese CNN."""
+    """Compare an uploaded image/logo against reference brands via Siamese CNN with DOS protection."""
     pipeline = get_pipeline()
     if not pipeline.m03_available or pipeline.siamese_matcher is None:
         return JSONResponse(
@@ -622,10 +672,80 @@ async def analyze_brand_similarity(
             },
         )
 
+    max_upload_bytes = int(os.getenv("PHISHVISION_MAX_UPLOAD_BYTES", str(DEFAULT_MAX_UPLOAD_BYTES)))
+
+    # Stream upload in bounded chunks to prevent unbounded memory allocation
+    chunk_size = 64 * 1024
+    raw_bytes = bytearray()
+    while chunk := await image.read(chunk_size):
+        raw_bytes.extend(chunk)
+        if len(raw_bytes) > max_upload_bytes:
+            return JSONResponse(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                content={
+                    "error_code": "PAYLOAD_TOO_LARGE",
+                    "message": f"Uploaded image exceeds maximum permitted size of {max_upload_bytes} bytes ({max_upload_bytes // (1024 * 1024)} MB).",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+            )
+
+    if len(raw_bytes) == 0:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "error_code": "EMPTY_PAYLOAD",
+                "message": "Uploaded file is empty (0 bytes).",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+
+    # Decode and validate image safely against decompression bombs and corrupted payloads
     try:
-        contents = await image.read()
-        import io
-        img = Image.open(io.BytesIO(contents)).convert("RGB")
+        Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
+        img = Image.open(io.BytesIO(raw_bytes))
+        img_format = (img.format or "").upper()
+        if img_format not in ALLOWED_IMAGE_FORMATS:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={
+                    "error_code": "UNSUPPORTED_IMAGE_FORMAT",
+                    "message": f"Unsupported image format '{img_format}'. Allowed formats: {sorted(list(ALLOWED_IMAGE_FORMATS))}.",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+            )
+
+        width, height = img.size
+        if width > MAX_IMAGE_DIMENSION or height > MAX_IMAGE_DIMENSION or (width * height) > MAX_IMAGE_PIXELS:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={
+                    "error_code": "IMAGE_DIMENSIONS_TOO_LARGE",
+                    "message": f"Image dimensions {width}x{height} ({width * height} pixels) exceed safety limits (max {MAX_IMAGE_DIMENSION}x{MAX_IMAGE_DIMENSION}, {MAX_IMAGE_PIXELS} pixels).",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+            )
+
+        img = img.convert("RGB")
+    except Image.DecompressionBombError as e:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "error_code": "DECOMPRESSION_BOMB_DETECTED",
+                "message": f"Image decompression bomb protection triggered: {e}",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "error_code": "INVALID_IMAGE_PAYLOAD",
+                "message": f"Failed to decode image payload: {e}",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+
+    try:
         res = await asyncio.to_thread(
             pipeline.siamese_matcher.verify_brand_authorization,
             query_image=img,
@@ -638,11 +758,12 @@ async def analyze_brand_similarity(
             "brand_similarity": res,
         }
     except Exception as e:
+        logger.error(f"Brand similarity analysis failed: {e}", exc_info=True)
         return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
-                "error_code": "INVALID_IMAGE_PAYLOAD",
-                "message": f"Failed to decode image: {e}",
+                "error_code": "INTERNAL_INFERENCE_ERROR",
+                "message": f"Inference execution failed: {e}",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         )

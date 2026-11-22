@@ -1,7 +1,7 @@
 # CURRENT_PHASE.md — Active Phase Status
 
-**Active Phase:** Phase 8 — Seven-Model Integration: Implementation  
-**Phase Status:** INTEGRATION COMPLETE & EMPIRICALLY VERIFIED (74/74 TESTS PASSING)  
+**Active Phase:** Phase 8.1 — Backend Reliability and Security Audit  
+**Phase Status:** AUDIT COMPLETE & EMPIRICALLY VERIFIED (386/386 TESTS PASSING)  
 **Previous Phases:**
 - Phase 0: Project Blueprint, Requirements & Architecture (COMPLETED)
 - Phase 1 & 1.1: Scanner Implementation & Security Hardening (COMPLETED)
@@ -18,12 +18,57 @@
 - Phase 7.7: M-06 YOLOv8n-Seg Instance Segmentation Training & Test Evaluation (COMPLETED, Box mAP50=0.9950, Mask mAP50=0.9950)
 - Phase 7.8: M-07 URL Sequence LSTM Training, Evaluation & Targeted Audit (COMPLETED, Accuracy=0.9869, ROC-AUC=0.9666, PR-AUC=0.9991, Macro F1=0.7779)
 - Phase 8: Seven-Model Multimodal Integration, Backend Completion, and Calibrated Risk Fusion (COMPLETED)
+- Phase 8.1: Backend Reliability and Security Audit (COMPLETED)
 **Target Next Milestone:** Phase 9 — Interactive Dashboard / Forensic UI & Production Deployment  
 **Timestamp:** 2026-11-23  
 
 ---
 
-## 1. Phase 8 Seven-Model Integration & Backend Completion Summary
+## 1. Phase 8.1 Backend Reliability and Security Audit Summary
+
+- **Scan Lifecycle Failure Handling (`app/api/v1/endpoints.py`):**
+  - Moved pipeline initialization (`pipeline = get_pipeline()`) inside the protected `try` block in `_run_scan_job()`.
+  - Guaranteed every scan job strictly transitions to a terminal state (`COMPLETED`, `FAILED`, or `BLOCKED_SSRF`).
+  - Added regression test (`test_scan_lifecycle_initialization_failure_reaches_terminal_failed`) proving that initialization failure marks scan record as `FAILED` and surfaces a 500 status on report retrieval instead of hanging in `IN_PROGRESS`.
+- **CORS Configuration Hardening (`app/main.py`):**
+  - Removed insecure wildcard origin `["*"]` combined with `allow_credentials=True`.
+  - Implemented `resolve_cors_configuration()` reading `PHISHVISION_CORS_ORIGINS`.
+  - Provided safe default origins for local development: `http://localhost:3000`, `http://127.0.0.1:3000`, `http://localhost:5173`, `http://127.0.0.1:5173`, `http://localhost:8000`, `http://127.0.0.1:8000`.
+  - Enforced automatic disabling of credentials (`allow_credentials=False`) if wildcard `*` is configured.
+  - Added regression test (`test_cors_resolution_security`).
+- **Image Upload DOS & Decompression Bomb Protection (`app/api/v1/endpoints.py`):**
+  - Replaced unconstrained in-memory reads (`await image.read()`) with bounded 64KB chunk streaming capped by `PHISHVISION_MAX_UPLOAD_BYTES` (default 10 MB), returning HTTP 413 `PAYLOAD_TOO_LARGE` if exceeded.
+  - Rejection of empty 0-byte uploads with HTTP 400 `EMPTY_PAYLOAD`.
+  - Strict format verification with Pillow (`ALLOWED_IMAGE_FORMATS = {"PNG", "JPEG", "JPG", "WEBP", "BMP"}`).
+  - Dimension limits: $\text{width}, \text{height} \le 4096$ px and $\text{total pixels} \le 16,000,000$ px, returning HTTP 400 `IMAGE_DIMENSIONS_TOO_LARGE`.
+  - Pillow decompression bomb protection (`Image.MAX_IMAGE_PIXELS = 16_000_000`) catching `Image.DecompressionBombError` and returning HTTP 400 `DECOMPRESSION_BOMB_DETECTED`.
+  - Corrupted payload handling returning HTTP 400 `INVALID_IMAGE_PAYLOAD`.
+  - Added regression test (`test_image_upload_security_protections`).
+- **Checkpoint Download Integrity (`scripts/download_checkpoints.py`):**
+  - Added `expected_sha256: None` to all registry entries (no synthetic or invented hashes).
+  - Enforced maximum download size limit `PHISHVISION_MAX_DOWNLOAD_BYTES` (default 500 MB).
+  - Streamed download into PID-unique temporary file (`.tmp_{pid}`) with incremental SHA-256 calculation.
+  - Atomically replaces destination file (`temp_path.replace(dest_path)`) only upon successful completion and verification.
+  - On failure or mismatch, temporary file is removed and existing checkpoint destination is strictly preserved.
+  - Added test suite [`tests/test_download_checkpoints.py`](tests/test_download_checkpoints.py) covering size limits, checksum match, mismatch preservation, and unverified downloads.
+- **Accurate Health Check Status Reporting (`app/api/v1/endpoints.py`):**
+  - Updated `/api/v1/health` logic:
+    - `OPERATIONAL`: All 7/7 models loaded (HTTP 200).
+    - `DEGRADED`: 1 to 6 models loaded (HTTP 200).
+    - `SERVICE_UNAVAILABLE`: 0 models loaded or pipeline initialization error (HTTP 503).
+  - Added regression test (`test_health_check_status_levels`).
+- **Scan Store Limitation & Production Scaling Requirements:**
+  - Documented that `ScanStore` is process-local and in-memory.
+  - Formulated architectural requirements for production multi-worker deployment:
+    1. Distributed datastore (PostgreSQL / Redis with persistence) for scan records.
+    2. Distributed task queue (Celery / ARQ / Redis Streams) for scanning jobs.
+    3. Shared object storage (S3 / GCS / MinIO) for screenshot and preview artifacts.
+- **API Abuse Protection Assessment:**
+  - Dynamic browser scanning is resource-intensive. Recommendations documented for public deployment:
+    1. Authentication: API Keys (`X-API-Key`) or Bearer tokens (`Authorization: Bearer <jwt>`).
+    2. Rate Limiting: Token-bucket or sliding-window rate limiter (e.g. 10 scans/minute per IP/API key).
+- **Automated Verification:**
+  - **386/386 tests passing (100%)** across the entire repository. Zero regressions.
 
 - **Unified Pipeline Architecture (`app/ml/unified_pipeline.py`):**
   - Unifies all 7 trained neural model pipelines (M-01 through M-07) behind a single production inferencer.

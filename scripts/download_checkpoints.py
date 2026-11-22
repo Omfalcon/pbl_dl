@@ -36,6 +36,7 @@ CHECKPOINT_REGISTRY: dict[str, dict[str, Any]] = {
         "env_var": "PHISHVISION_M01_WEIGHTS",
         "default_path": "models/lexical/model_weights.npz",
         "remote_filename": "m01_lexical_model_weights.npz",
+        "expected_sha256": None,
         "required": True,
     },
     "M-01_preprocessor": {
@@ -44,6 +45,7 @@ CHECKPOINT_REGISTRY: dict[str, dict[str, Any]] = {
         "env_var": "PHISHVISION_M01_PREPROCESSOR",
         "default_path": "models/lexical/preprocessor.json",
         "remote_filename": "m01_lexical_preprocessor.json",
+        "expected_sha256": None,
         "required": True,
     },
     "M-02_checkpoint": {
@@ -52,6 +54,7 @@ CHECKPOINT_REGISTRY: dict[str, dict[str, Any]] = {
         "env_var": "PHISHVISION_M02_CHECKPOINT",
         "default_path": "models/checkpoints/resnet18/best_model.pt",
         "remote_filename": "m02_resnet18_best_model.pt",
+        "expected_sha256": None,
         "required": True,
     },
     "M-03_checkpoint": {
@@ -60,6 +63,7 @@ CHECKPOINT_REGISTRY: dict[str, dict[str, Any]] = {
         "env_var": "PHISHVISION_M03_CHECKPOINT",
         "default_path": "models/checkpoints/siamese/best_siamese.pt",
         "remote_filename": "m03_siamese_best_model.pt",
+        "expected_sha256": None,
         "required": True,
     },
     "M-04_checkpoint": {
@@ -68,6 +72,7 @@ CHECKPOINT_REGISTRY: dict[str, dict[str, Any]] = {
         "env_var": "PHISHVISION_M04_CHECKPOINT",
         "default_path": "models/checkpoints/yolov8n_synthetic/run1/weights/best.pt",
         "remote_filename": "m04_yolov8n_synthetic_best.pt",
+        "expected_sha256": None,
         "required": True,
     },
     "M-05_checkpoint": {
@@ -76,6 +81,7 @@ CHECKPOINT_REGISTRY: dict[str, dict[str, Any]] = {
         "env_var": "PHISHVISION_M05_CHECKPOINT",
         "default_path": "models/checkpoints/faster_rcnn_synthetic/best_faster_rcnn.pt",
         "remote_filename": "m05_faster_rcnn_synthetic_best.pt",
+        "expected_sha256": None,
         "required": True,
     },
     "M-06_checkpoint": {
@@ -84,6 +90,7 @@ CHECKPOINT_REGISTRY: dict[str, dict[str, Any]] = {
         "env_var": "PHISHVISION_M06_CHECKPOINT",
         "default_path": "models/checkpoints/yolov8n_seg_synthetic/run1/weights/best.pt",
         "remote_filename": "m06_yolov8n_seg_synthetic_best.pt",
+        "expected_sha256": None,
         "required": True,
     },
     "M-07_checkpoint": {
@@ -92,6 +99,7 @@ CHECKPOINT_REGISTRY: dict[str, dict[str, Any]] = {
         "env_var": "PHISHVISION_M07_CHECKPOINT",
         "default_path": "models/checkpoints/lstm/best_lstm.pt",
         "remote_filename": "m07_lstm_best_model.pt",
+        "expected_sha256": None,
         "required": True,
     },
     "M-07_preprocessor": {
@@ -100,9 +108,17 @@ CHECKPOINT_REGISTRY: dict[str, dict[str, Any]] = {
         "env_var": "PHISHVISION_M07_PREPROCESSOR",
         "default_path": "models/checkpoints/lstm/preprocessor.json",
         "remote_filename": "m07_lstm_preprocessor.json",
+        "expected_sha256": None,
         "required": True,
     },
 }
+
+DEFAULT_MAX_DOWNLOAD_BYTES = 500 * 1024 * 1024  # 500 MB default per artifact
+
+
+def get_max_download_bytes() -> int:
+    """Return maximum permitted artifact download size in bytes."""
+    return int(os.getenv("PHISHVISION_MAX_DOWNLOAD_BYTES", str(DEFAULT_MAX_DOWNLOAD_BYTES)))
 
 
 def compute_sha256(file_path: Path) -> str:
@@ -150,14 +166,58 @@ def verify_checkpoints() -> dict[str, Any]:
     return report
 
 
-def download_artifact(url: str, dest_path: Path) -> None:
-    """Download an external artifact with progress reporting."""
+def download_artifact(url: str, dest_path: Path, expected_sha256: str | None = None) -> None:
+    """Download an external artifact with progress reporting, size bounds, and SHA-256 integrity verification."""
     dest_path.parent.mkdir(parents=True, exist_ok=True)
-    temp_path = dest_path.with_suffix(".tmp")
-    logger.info(f"Downloading {url} -> {dest_path}...")
-    urllib.request.urlretrieve(url, str(temp_path))
-    temp_path.replace(dest_path)
-    logger.info(f"Successfully saved {dest_path} ({dest_path.stat().st_size} bytes)")
+    temp_path = dest_path.with_suffix(f".tmp_{os.getpid()}")
+    max_bytes = get_max_download_bytes()
+
+    hasher = hashlib.sha256()
+    downloaded_bytes = 0
+    chunk_size = 64 * 1024
+
+    logger.info(f"Downloading {url} -> {dest_path} (max size: {max_bytes // (1024 * 1024)} MB)...")
+
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "PhishVision-Artifact-Manager/1.0"})
+        with urllib.request.urlopen(req) as response, temp_path.open("wb") as out_file:
+            while chunk := response.read(chunk_size):
+                downloaded_bytes += len(chunk)
+                if downloaded_bytes > max_bytes:
+                    raise ValueError(
+                        f"Download exceeded maximum permitted size of {max_bytes} bytes "
+                        f"({max_bytes // (1024 * 1024)} MB). Aborting."
+                    )
+                hasher.update(chunk)
+                out_file.write(chunk)
+
+        computed_sha256 = hasher.hexdigest().lower()
+
+        if expected_sha256:
+            if computed_sha256 != expected_sha256.lower():
+                raise ValueError(
+                    f"SHA-256 verification failed for {dest_path.name}: "
+                    f"expected {expected_sha256}, got {computed_sha256}"
+                )
+            logger.info(f"SHA-256 integrity verified for {dest_path.name}: {computed_sha256}")
+        else:
+            logger.warning(
+                f"Verification unavailable: no expected SHA-256 hash configured for {dest_path.name}. "
+                f"(Computed hash: {computed_sha256})"
+            )
+
+        # Atomically replace destination only after complete, verified download
+        temp_path.replace(dest_path)
+        logger.info(f"Successfully saved {dest_path} ({dest_path.stat().st_size} bytes)")
+
+    except Exception as e:
+        logger.error(f"Download failed for {dest_path.name}: {e}")
+        if temp_path.exists():
+            try:
+                temp_path.unlink()
+            except OSError:
+                pass
+        raise
 
 
 def main() -> None:
@@ -201,7 +261,11 @@ def main() -> None:
             if not target_p.exists():
                 remote_url = f"{base_url}/{spec['remote_filename']}"
                 try:
-                    download_artifact(remote_url, target_p)
+                    download_artifact(
+                        url=remote_url,
+                        dest_path=target_p,
+                        expected_sha256=spec.get("expected_sha256"),
+                    )
                 except Exception as e:
                     logger.error(f"Failed to download {key} from {remote_url}: {e}")
 

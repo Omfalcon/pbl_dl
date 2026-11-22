@@ -1,8 +1,8 @@
 # PROJECT_STATE.md — Persistent Project State
 
 **Project:** PhishVision AI (Phishing Website and Brand Impersonation Detector)  
-**Current Phase:** Phase 8 — Seven-Model Integration: Implementation  
-**Phase Status:** INTEGRATION COMPLETE & EMPIRICALLY VERIFIED (74/74 TESTS PASSING)  
+**Current Phase:** Phase 8.1 — Backend Reliability and Security Audit  
+**Phase Status:** AUDIT COMPLETE & EMPIRICALLY VERIFIED (386/386 TESTS PASSING)  
 **Next Milestone:** Phase 9 — Interactive Dashboard / Forensic UI & Production API Deployment  
 **Last Updated:** 2026-11-23  
 
@@ -94,7 +94,15 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
   - Non-duplicative spatial consensus engine (`app/ml/vision/spatial_consensus.py`) merging M-04, M-05, and M-06 via IoU clustering ($\text{IoU} \ge 0.45$) and filtering oversized background boxes (> 45% image area).
   - Risk fusion false positive resolution: resolved empty/404 false positive on `cloudsupport-knowledge.org` (now correctly `SUSPICIOUS 0.40`) and clean legitimate false positive on `t.me` (now correctly `LEGITIMATE 0.30`).
   - Preserved UNKNOWN fallback, anti-SSRF protections, brand whitelist, and critical brand impersonation override.
-  - Automated verification: **89/89 unit, integration, and regression tests passing (100%)**.
+- **Phase 8.1 (Backend Reliability and Security Audit):** COMPLETED & EMPIRICALLY HARDENED.
+  - Scan lifecycle terminal state guarantee: moved pipeline initialization inside `try:` in `_run_scan_job()`, ensuring all scans reach terminal state (`COMPLETED`, `FAILED`, `BLOCKED_SSRF`) and pipeline initialization errors transition to `FAILED` (HTTP 500 on report).
+  - CORS security: replaced wildcard + credentials vulnerability with `PHISHVISION_CORS_ORIGINS` resolution, localhost defaults, and automatic credential disabling on wildcard origins.
+  - Image upload DOS & decompression bomb protection: chunked 64KB streaming capped by `PHISHVISION_MAX_UPLOAD_BYTES` (10 MB default, 413 response), format validation (`PNG`, `JPEG`, `WEBP`, `BMP`), dimension limits ($\le 4096$ px, $\le 16$ Mpx), and Pillow decompression bomb detection (`Image.MAX_IMAGE_PIXELS = 16_000_000`).
+  - Checkpoint download integrity: optional `expected_sha256` in registry (default None, no synthetic hashes), size bounds `PHISHVISION_MAX_DOWNLOAD_BYTES` (500 MB default), PID-isolated streaming, atomic file replacement, and failure preservation of existing files.
+  - Health reporting accuracy: `/api/v1/health` distinguishes `OPERATIONAL` (7/7 models loaded), `DEGRADED` (1-6 models loaded), and `SERVICE_UNAVAILABLE` (0 models loaded or init failure, returning HTTP 503).
+  - ScanStore process-local limitations & production clustering requirements documented.
+  - API abuse protection assessment documented (authentication & sliding-window rate limiting).
+  - Automated verification: **386/386 unit, integration, and regression tests passing (100%)**.
 
 ---
 
