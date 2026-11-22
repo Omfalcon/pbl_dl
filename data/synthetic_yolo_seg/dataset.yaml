@@ -1,0 +1,13 @@
+# Ultralytics YOLOv8 Segmentation Dataset Configuration — PhishVision AI (M-06)
+path: C:/Users/hp/PycharmProjects/pbl_dl/data/synthetic_yolo_seg
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: brand_logo
+  1: login_form
+  2: username_field
+  3: password_field
+  4: submit_button
+  5: payment_element

@@ -1,0 +1,7 @@
+class_id,class_name,box_precision,box_recall,box_mAP50,box_mAP50_95,mask_precision,mask_recall,mask_mAP50,mask_mAP50_95
+0,brand_logo,0.9988,1.0,0.995,0.7564,0.9988,1.0,0.995,0.8457
+1,login_form,0.9945,1.0,0.995,0.995,0.9945,1.0,0.995,0.995
+2,username_field,0.9893,1.0,0.995,0.8955,0.9893,1.0,0.995,0.8955
+3,password_field,0.9936,1.0,0.995,0.995,0.9936,1.0,0.995,0.8654
+4,submit_button,0.9936,1.0,0.995,0.7957,0.9936,1.0,0.995,0.7828
+5,payment_element,0.745,1.0,0.995,0.896,0.745,1.0,0.995,0.9716

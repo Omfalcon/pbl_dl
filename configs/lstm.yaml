@@ -1,0 +1,43 @@
+# M-07 URL Sequence LSTM Configuration — PhishVision AI
+# Phase 7.8: Sequential URL and Redirect Pattern Analysis
+
+model:
+  model_id: "M-07"
+  architecture: "URLSequenceLSTM"
+  url_embed_dim: 64
+  hidden_dim: 64
+  num_layers: 2
+  bidirectional: true
+  dropout: 0.3
+  fc_dim: 64
+  max_seq_len: 256
+  use_redirects: true
+  redirect_embed_dim: 32
+  redirect_hidden_dim: 32
+  max_redirect_len: 8
+
+data:
+  train_parquet: "data/splits/train/urls.parquet"
+  val_parquet: "data/splits/validation/urls.parquet"
+  test_parquet: "data/splits/test/urls.parquet"
+  url_column: "canonical_url"
+  label_column: "label"
+  preprocessor_path: "models/checkpoints/lstm/preprocessor.json"
+  min_char_freq: 1
+  min_token_freq: 2
+
+training:
+  random_seed: 42
+  batch_size: 128
+  epochs: 15
+  learning_rate: 0.001
+  weight_decay: 1.0e-5
+  patience: 5
+  device: "cuda"
+  class_weight_strategy: "balanced"
+  num_workers: 0
+
+paths:
+  checkpoint_dir: "models/checkpoints/lstm"
+  checkpoint_name: "best_lstm.pt"
+  report_dir: "data/reports/lstm"

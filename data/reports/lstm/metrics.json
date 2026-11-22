@@ -1,0 +1,101 @@
+{
+  "status": "EVALUATION_COMPLETE",
+  "model_id": "M-07",
+  "architecture": "URLSequenceLSTM",
+  "checkpoint": "models\\checkpoints\\lstm\\best_lstm.pt",
+  "calibrated_threshold": 0.01,
+  "validation_metrics": {
+    "threshold": 0.01,
+    "total_samples": 7715,
+    "accuracy": 0.95813,
+    "roc_auc": 0.91879,
+    "pr_auc": 0.99912,
+    "macro_avg": {
+      "precision": 0.54446,
+      "recall": 0.67031,
+      "f1": 0.56538
+    },
+    "class_0_legitimate": {
+      "precision": 0.09539,
+      "recall": 0.37662,
+      "f1": 0.15223,
+      "support": 77
+    },
+    "class_1_phishing": {
+      "precision": 0.99352,
+      "recall": 0.964,
+      "f1": 0.97854,
+      "support": 7638
+    },
+    "confusion_matrix": {
+      "true_negative": 29,
+      "false_positive": 48,
+      "false_negative": 275,
+      "true_positive": 7363
+    },
+    "latency_ms": 0.0,
+    "checkpoint_size_mb": 0.0
+  },
+  "test_metrics": {
+    "threshold": 0.01,
+    "total_samples": 4257,
+    "accuracy": 0.98685,
+    "roc_auc": 0.9666,
+    "pr_auc": 0.99913,
+    "macro_avg": {
+      "precision": 0.88584,
+      "recall": 0.71831,
+      "f1": 0.77791
+    },
+    "class_0_legitimate": {
+      "precision": 0.78261,
+      "recall": 0.43902,
+      "f1": 0.5625,
+      "support": 82
+    },
+    "class_1_phishing": {
+      "precision": 0.98908,
+      "recall": 0.9976,
+      "f1": 0.99332,
+      "support": 4175
+    },
+    "confusion_matrix": {
+      "true_negative": 36,
+      "false_positive": 46,
+      "false_negative": 10,
+      "true_positive": 4165
+    },
+    "latency_ms": 0.072,
+    "checkpoint_size_mb": 2.41
+  },
+  "m01_comparison": {
+    "threshold": 0.05,
+    "total_samples": 4257,
+    "confusion_matrix": {
+      "true_positive": 4146,
+      "false_positive": 28,
+      "true_negative": 54,
+      "false_negative": 29
+    },
+    "accuracy": 0.9866102889358703,
+    "class_0_legitimate": {
+      "precision": 0.6506024096385542,
+      "recall": 0.6585365853658537,
+      "f1": 0.6545454545454545,
+      "support": 82
+    },
+    "class_1_phishing": {
+      "precision": 0.9932918064206996,
+      "recall": 0.9930538922155688,
+      "f1": 0.9931728350700683,
+      "support": 4175
+    },
+    "macro_avg": {
+      "precision": 0.8219471080296269,
+      "recall": 0.8257952387907113,
+      "f1": 0.8238591448077615
+    },
+    "roc_auc": 0.9772893237914415,
+    "pr_auc": 0.9995242693074335
+  }
+}

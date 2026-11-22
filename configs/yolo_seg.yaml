@@ -1,0 +1,37 @@
+# YOLOv8-Seg Instance Segmentation (M-06) Synthetic UI Experiment Configuration
+# PhishVision AI - Phase 7.7
+
+model:
+  model_id: "M-06"
+  architecture: "YOLOv8n-seg"
+  weights: "yolov8n-seg.pt"           # Ultralytics pre-trained nano segmentation weights
+  num_classes: 6
+  classes:
+    0: "brand_logo"
+    1: "login_form"
+    2: "username_field"
+    3: "password_field"
+    4: "submit_button"
+    5: "payment_element"
+
+data:
+  dataset_dir: "data/synthetic_yolo_seg"
+  dataset_yaml: "data/synthetic_yolo_seg/dataset.yaml"
+  imgsz: 512                          # 512x512 resolution (hardware-aware for 4GB VRAM)
+  workers: 2                          # Conservative dataloader workers for Windows
+
+training:
+  random_seed: 42
+  batch_size: 4                       # Conservative batch size for RTX 2050 4GB VRAM
+  epochs: 25
+  patience: 10                        # Early stopping patience
+  device: 0                           # GPU device ID (falls back to cpu if unavailable)
+  half: true                          # FP16 mixed precision for fast inference & lower VRAM
+  optimizer: "auto"
+  save: true
+  plots: true                         # Automatically generate loss curves and mask curves
+
+paths:
+  project: "models/checkpoints/yolov8n_seg_synthetic"
+  name: "run1"
+  report_dir: "data/reports/yolo_seg"

@@ -1,0 +1,90 @@
+{
+  "status": "EVALUATION_COMPLETE",
+  "model_id": "M-06",
+  "architecture": "YOLOv8n-seg",
+  "checkpoint": "models\\checkpoints\\yolov8n_seg_synthetic\\run1\\weights\\best.pt",
+  "split": "test",
+  "box_mAP50": 0.995,
+  "box_mAP50_95": 0.8889,
+  "box_precision": 0.9525,
+  "box_recall": 1.0,
+  "mask_mAP50": 0.995,
+  "mask_mAP50_95": 0.8927,
+  "mask_precision": 0.9525,
+  "mask_recall": 1.0,
+  "checkpoint_size_mb": 6.45,
+  "class_metrics": {
+    "0": {
+      "class_id": 0,
+      "class_name": "brand_logo",
+      "box_precision": 0.9988,
+      "box_recall": 1.0,
+      "box_mAP50": 0.995,
+      "box_mAP50_95": 0.7564,
+      "mask_precision": 0.9988,
+      "mask_recall": 1.0,
+      "mask_mAP50": 0.995,
+      "mask_mAP50_95": 0.8457
+    },
+    "1": {
+      "class_id": 1,
+      "class_name": "login_form",
+      "box_precision": 0.9945,
+      "box_recall": 1.0,
+      "box_mAP50": 0.995,
+      "box_mAP50_95": 0.995,
+      "mask_precision": 0.9945,
+      "mask_recall": 1.0,
+      "mask_mAP50": 0.995,
+      "mask_mAP50_95": 0.995
+    },
+    "2": {
+      "class_id": 2,
+      "class_name": "username_field",
+      "box_precision": 0.9893,
+      "box_recall": 1.0,
+      "box_mAP50": 0.995,
+      "box_mAP50_95": 0.8955,
+      "mask_precision": 0.9893,
+      "mask_recall": 1.0,
+      "mask_mAP50": 0.995,
+      "mask_mAP50_95": 0.8955
+    },
+    "3": {
+      "class_id": 3,
+      "class_name": "password_field",
+      "box_precision": 0.9936,
+      "box_recall": 1.0,
+      "box_mAP50": 0.995,
+      "box_mAP50_95": 0.995,
+      "mask_precision": 0.9936,
+      "mask_recall": 1.0,
+      "mask_mAP50": 0.995,
+      "mask_mAP50_95": 0.8654
+    },
+    "4": {
+      "class_id": 4,
+      "class_name": "submit_button",
+      "box_precision": 0.9936,
+      "box_recall": 1.0,
+      "box_mAP50": 0.995,
+      "box_mAP50_95": 0.7957,
+      "mask_precision": 0.9936,
+      "mask_recall": 1.0,
+      "mask_mAP50": 0.995,
+      "mask_mAP50_95": 0.7828
+    },
+    "5": {
+      "class_id": 5,
+      "class_name": "payment_element",
+      "box_precision": 0.745,
+      "box_recall": 1.0,
+      "box_mAP50": 0.995,
+      "box_mAP50_95": 0.896,
+      "mask_precision": 0.745,
+      "mask_recall": 1.0,
+      "mask_mAP50": 0.995,
+      "mask_mAP50_95": 0.9716
+    }
+  }
+}
