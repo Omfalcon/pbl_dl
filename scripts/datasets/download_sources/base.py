@@ -44,7 +44,10 @@ class DownloadResult:
 class BaseDownloader:
     """Base class for all automated dataset acquisition sources in PhishVision AI."""
 
-    DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) PhishVision-Research/1.0"
+    DEFAULT_USER_AGENT = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/122.0.0.0 Safari/537.36 PhishVision/2.0"
+    )
 
     def __init__(
         self,

@@ -50,7 +50,9 @@ class NormalizedURLRecord:
     port: int | None
     path: str
     has_query: bool
-    label: int  # 0 = Benign/Legitimate, 1 = Phishing
+    raw_label: str | None
+    label: int | None  # 0 = Benign, 1 = Phishing, -1 = Unverified Candidate, None = Rejected
+    verification_status: str  # "VERIFIED", "UNVERIFIED_CANDIDATE", "REJECTED_UNKNOWN"
     source: str
     target_brand: str | None = None
     collection_timestamp: str | None = None
@@ -64,35 +66,61 @@ class URLNormalizer:
         self._extractor = tldextract.TLDExtract(cache_dir="data/cache/tldextract", suffix_list_urls=())
 
     @staticmethod
-    def parse_label(raw_label: Any) -> int:
-        """Map heterogeneous source labels into binary classification truth (0=Benign, 1=Phishing)."""
+    def parse_label(raw_label: Any) -> tuple[int | None, str]:
+        """Map heterogeneous source labels into binary classification truth, candidate status, or rejection.
+
+        Returns:
+            (label_int, verification_status):
+            - (0, "VERIFIED") for explicit legitimate/benign sources.
+            - (1, "VERIFIED") for explicit verified phishing sources.
+            - (-1, "UNVERIFIED_CANDIDATE") for candidate feeds (e.g. Tranco popular list).
+            - (None, "REJECTED_UNKNOWN") for missing, ambiguous, or malformed labels.
+        """
         if raw_label is None:
-            return 1  # Default to untrusted if ambiguous
+            return None, "REJECTED_UNKNOWN"
+
         if isinstance(raw_label, (int, float)):
-            return 1 if int(raw_label) >= 1 else 0
+            val = int(raw_label)
+            if val == 0:
+                return 0, "VERIFIED"
+            elif val == 1:
+                return 1, "VERIFIED"
+            elif val == -1:
+                return -1, "UNVERIFIED_CANDIDATE"
+            else:
+                return None, "REJECTED_UNKNOWN"
 
         lbl = str(raw_label).strip().lower()
+        if not lbl or lbl in {"none", "nan", "null", "unknown", "pending", "unlabeled"}:
+            return None, "REJECTED_UNKNOWN"
+
         if lbl in {"0", "benign", "legit", "legitimate", "not-phishing", "clean", "safe", "ham"}:
-            return 0
+            return 0, "VERIFIED"
         if lbl in {"1", "phish", "phishing", "malicious", "bad", "spam"}:
-            return 1
-        return 1
+            return 1, "VERIFIED"
+        if lbl in {"candidate", "unverified", "tranco_candidate", "-1"}:
+            return -1, "UNVERIFIED_CANDIDATE"
+
+        return None, "REJECTED_UNKNOWN"
 
     def normalize(
         self,
         raw_url: str,
-        label: Any = 1,
+        label: Any = "unverified",
         source: str = "unknown",
         target_brand: str | None = None,
         timestamp: str | None = None,
     ) -> NormalizedURLRecord | None:
-        """Canonicalize raw URL, remove noise parameters, and extract registrable domain."""
+        """Canonicalize raw URL, remove noise parameters, parse userinfo/IPv6/IDN, and extract PSL domain."""
         if not raw_url or not isinstance(raw_url, str):
             return None
 
         url_str = raw_url.strip()
         if not url_str:
             return None
+
+        # Parse label and verification status
+        label_int, verification_status = self.parse_label(label)
 
         # Ensure scheme is present
         if not re.match(r"^[a-zA-Z][a-zA-Z0-9+\-.]*://", url_str):
@@ -111,19 +139,48 @@ class URLNormalizer:
         if not netloc:
             return None
 
-        # Parse port
+        # Handle userinfo (e.g. user:pass@host)
+        userinfo = None
+        if "@" in netloc:
+            userinfo, netloc = netloc.rsplit("@", 1)
+
+        # Handle IPv6 literals and port parsing
         port = None
         hostname = netloc
-        if ":" in netloc and not netloc.startswith("["):
-            parts = netloc.split(":")
-            hostname = parts[0]
+        if netloc.startswith("["):
+            bracket_end = netloc.find("]")
+            if bracket_end != -1:
+                hostname = netloc[: bracket_end + 1]
+                rest = netloc[bracket_end + 1 :]
+                if rest.startswith(":"):
+                    try:
+                        port = int(rest[1:])
+                    except ValueError:
+                        return None
+        else:
+            if ":" in netloc:
+                parts = netloc.split(":")
+                hostname = parts[0]
+                try:
+                    port = int(parts[1])
+                except ValueError:
+                    return None
+
+        # Drop standard default ports
+        if (scheme == "http" and port == 80) or (scheme == "https" and port == 443):
+            port = None
+
+        if port is not None and not (1 <= port <= 65535):
+            return None
+
+        # Handle Internationalized Domain Names (IDN punycode normalization)
+        hostname_normalized = hostname
+        if not hostname.startswith("["):
             try:
-                port = int(parts[1])
-                # Drop standard default ports
-                if (scheme == "http" and port == 80) or (scheme == "https" and port == 443):
-                    port = None
-            except ValueError:
-                return None
+                # Convert unicode hostnames to punycode
+                hostname_normalized = hostname.encode("idna").decode("ascii").lower()
+            except Exception:
+                hostname_normalized = hostname.lower()
 
         # Clean query parameters
         cleaned_query = ""
@@ -139,21 +196,23 @@ class URLNormalizer:
         path = parsed.path or "/"
         path = re.sub(r"/{2,}", "/", path)
 
-        # Build clean canonical URL
-        reconstructed_netloc = f"{hostname}:{port}" if port else hostname
+        # Reconstruct canonical authority
+        reconstructed_netloc = f"{hostname_normalized}:{port}" if port else hostname_normalized
         canonical = urllib.parse.urlunsplit(
             (scheme, reconstructed_netloc, path, cleaned_query, "")
         )
 
         # Domain extraction via PSL
-        extracted = self._extractor(hostname)
-        reg_domain = (
-            getattr(extracted, "top_domain_under_public_suffix", None)
-            or getattr(extracted, "registered_domain", None)
-            or hostname
-        )
+        extracted = self._extractor(hostname_normalized)
+        top_domain = getattr(extracted, "top_domain_under_public_suffix", "")
+        if top_domain:
+            reg_domain = top_domain
+        else:
+            domain = getattr(extracted, "domain", "")
+            suffix = getattr(extracted, "suffix", "")
+            reg_domain = f"{domain}.{suffix}" if domain and suffix else (domain or hostname_normalized)
 
-        # SHA-256 hash for fast indexing & deduplication
+        # SHA-256 hash of canonical URL
         url_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
         # Clean target brand string
@@ -168,14 +227,16 @@ class URLNormalizer:
             canonical_url=canonical,
             url_hash_sha256=url_hash,
             scheme=scheme,
-            hostname=hostname,
+            hostname=hostname_normalized,
             registrable_domain=reg_domain,
             subdomain=extracted.subdomain,
             tld=extracted.suffix,
             port=port,
             path=path,
             has_query=bool(cleaned_query),
-            label=self.parse_label(label),
+            raw_label=str(label) if label is not None else None,
+            label=label_int,
+            verification_status=verification_status,
             source=source,
             target_brand=clean_brand,
             collection_timestamp=timestamp,

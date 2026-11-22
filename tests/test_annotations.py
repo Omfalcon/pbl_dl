@@ -9,7 +9,12 @@ import pytest
 from PIL import Image
 
 from scripts.datasets.generate_annotations import AnnotationManager
-from scripts.datasets.validate_annotations import AnnotationValidator, BoundingBox
+from scripts.datasets.validate_annotations import (
+    AnnotationValidator,
+    BoundingBox,
+    SegmentationMaskManager,
+    generate_dataset_annotation_report,
+)
 from scripts.datasets.visualize_annotations import AnnotationVisualizer
 
 
@@ -90,6 +95,97 @@ class TestAnnotationValidator:
         is_val, errs = validator.validate_segmentation_mask(mask_path)
         assert is_val is False
         assert any("invalid class pixel values" in e for e in errs)
+
+    def test_independent_box_validation_not_poisoned_by_earlier_error(self, tmp_path: Path):
+        """Fix verification: Line 1 error does NOT prevent line 2 valid box from being parsed."""
+        txt_path = tmp_path / "mixed.txt"
+        # Line 1: Invalid class 99
+        # Line 2: Perfectly valid class 0 box
+        txt_path.write_text("99 0.5 0.5 0.2 0.2\n0 0.1 0.1 0.2 0.2\n", encoding="utf-8")
+        validator = AnnotationValidator()
+        res = validator.validate_yolo_file(txt_path)
+        assert res.is_valid is False
+        assert len(res.errors) >= 1
+        # The valid box on line 2 must be parsed independently and retained
+        assert len(res.boxes) == 1
+        assert res.boxes[0].class_id == 0
+        assert res.boxes[0].class_name == "logo"
+
+
+class TestSegmentationMaskManager:
+    """Verifies mask persistence, loading, and cross-modality image pairing."""
+
+    def test_mask_save_and_load_roundtrip(self, tmp_path: Path):
+        mask_p = tmp_path / "test_mask.png"
+        mask_arr = np.zeros((150, 200), dtype=np.uint8)
+        mask_arr[10:40, :] = 1  # Header
+        mask_arr[50:100, 30:170] = 3  # Credential form
+
+        saved_p = SegmentationMaskManager.save_mask(mask_arr, mask_p)
+        assert saved_p.exists()
+
+        loaded_arr = SegmentationMaskManager.load_mask(saved_p)
+        assert loaded_arr.shape == (150, 200)
+        assert np.array_equal(mask_arr, loaded_arr)
+
+    def test_image_mask_pair_matching(self, tmp_path: Path):
+        img_p = tmp_path / "screen.png"
+        mask_p = tmp_path / "screen_mask.png"
+
+        # Matching pair (300 x 400)
+        Image.new("RGB", (400, 300), color=(200, 200, 200)).save(img_p)
+        mask_arr = np.zeros((300, 400), dtype=np.uint8)
+        SegmentationMaskManager.save_mask(mask_arr, mask_p)
+
+        ok, errs = SegmentationMaskManager.validate_image_mask_pair(img_p, mask_p)
+        assert ok is True
+        assert len(errs) == 0
+
+    def test_image_mask_pair_dimension_mismatch(self, tmp_path: Path):
+        img_p = tmp_path / "screen.png"
+        mask_p = tmp_path / "screen_mask.png"
+
+        # Mismatched pair
+        Image.new("RGB", (400, 300), color=(200, 200, 200)).save(img_p)
+        mask_arr = np.zeros((200, 200), dtype=np.uint8)  # Wrong size!
+        SegmentationMaskManager.save_mask(mask_arr, mask_p)
+
+        ok, errs = SegmentationMaskManager.validate_image_mask_pair(img_p, mask_p)
+        assert ok is False
+        assert any("Dimension mismatch" in e for e in errs)
+
+
+class TestAnnotationReporting:
+    """Verifies dataset-level audit reporting and strict human verification separation."""
+
+    def test_generate_dataset_annotation_report_verifications(self, tmp_path: Path):
+        import json
+
+        ann_dir = tmp_path / "annotations"
+        det_dir = ann_dir / "detection"
+        det_dir.mkdir(parents=True)
+
+        # 1. Manually verified file
+        f1 = det_dir / "screen1.txt"
+        f1.write_text("0 0.5 0.5 0.2 0.2\n", encoding="utf-8")
+        meta1 = det_dir / "screen1_meta.json"
+        meta1.write_text(json.dumps({"is_verified": True}), encoding="utf-8")
+
+        # 2. Unverified candidate file
+        f2 = det_dir / "screen2.txt"
+        f2.write_text("1 0.5 0.5 0.3 0.1\n", encoding="utf-8")
+        meta2 = det_dir / "screen2_meta.json"
+        meta2.write_text(json.dumps({"is_verified": False}), encoding="utf-8")
+
+        # 3. File without meta (must also be counted as unverified!)
+        f3 = det_dir / "screen3.txt"
+        f3.write_text("2 0.5 0.5 0.3 0.1\n", encoding="utf-8")
+
+        rep = generate_dataset_annotation_report(ann_dir)
+        assert rep.total_images_annotated == 3
+        assert rep.manually_verified_count == 1
+        assert rep.unverified_candidate_count == 2
+        assert rep.invalid_annotations_count == 0
 
 
 class TestAnnotationVisualizer:

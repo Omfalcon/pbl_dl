@@ -12,13 +12,13 @@ Visual intelligence represents the primary empirical research pillar of PhishVis
 
 | Dataset Modality | Target Volume | Acquired / Prepared Status | Annotations & Formats | Primary Model Consumer |
 | :--- | :--- | :--- | :--- | :--- |
-| **1. General Webpage Screenshots** | 10,000 images (5k Legit / 5k Phish) | Pipeline operational; Playwright scanner + Zenodo archives | Binary label (`0`/`1`), Domain, Timestamp, pHash | Module 1: ResNet-18/50 Classifier |
-| **2. Brand Visual Comparison Pairs** | $\ge 1,000$ image pairs (18 Brands) | 18 Brand workspaces initialized | Pair tuples `(img1, img2, label)`, Triplet tuples | Module 2: Siamese CNN (Triplet Loss) |
-| **3. UI Component & Logo Detection** | ~1,500 annotated screenshots | Annotation engine operational (`data/annotations/detection/`) | YOLO format `.txt` (5 classes, normalized bboxes) | Module 3: Ultralytics YOLOv8/v11 |
-| **4. Webpage Region Segmentation** | ~1,000 annotated screenshots | Segmentation validator operational | 8-bit PNG masks (U-Net) & COCO JSON (YOLO-Seg) | Module 4: U-Net & YOLO-Seg |
-| **5. Curated Brand Reference Gallery**| 18 high-value target brands | **18 brand folders scaffolded** | Canonical domains, brand metadata, SVG/PNG assets | Module 2 Gallery & Domain Association |
+| **1. General Webpage Screenshots** | 10,000 images (5k Legit / 5k Phish) | **1,008 valid screenshots on disk** (804 Phish / 204 Legit; 1,000 from `data/raw/external_dataset/` + 8 scanner baseline) | Binary label (`0`/`1`), Domain, Timestamp, pHash | Module 1: ResNet-18/50 Classifier |
+| **2. Brand Visual Comparison Pairs** | $\ge 1,000$ image pairs (18 Brands) | 18 Brand workspaces scaffolded; 0 pairs curated (pending brand image assets) | Pair tuples `(img1, img2, label)`, Triplet tuples | Module 2: Siamese CNN (Triplet Loss) |
+| **3. UI Component & Logo Detection** | ~1,500 annotated screenshots | Annotation engine & independent validator operational; 0 annotations on disk | YOLO format `.txt` (5 classes, normalized bboxes) | Module 3: Ultralytics YOLOv8/v11 |
+| **4. Webpage Region Segmentation** | ~1,000 annotated screenshots | `SegmentationMaskManager` operational; 0 masks on disk | 8-bit PNG masks (U-Net) & COCO JSON (YOLO-Seg) | Module 4: U-Net & YOLO-Seg |
+| **5. Curated Brand Reference Gallery**| 18 high-value target brands | **18 brand folders scaffolded**; 0 reference images on disk | Canonical domains, brand metadata, SVG/PNG assets | Module 2 Gallery & Domain Association |
 | **6. Redirect & Navigation Sequences** | ~2,000 multi-hop traces | Scanner redirect capture active | Chronological hops, HTTP status, domain switches | LSTM & Transformer Sequence Models |
-| **7. Lexical URL Feature Vectors** | 20,000+ tabular records | **94,125 unique normalized records** | PSL domains, tracking stripped, binary labels | MLP Baseline Model |
+| **7. Lexical URL Feature Vectors** | 20,000+ tabular records | **44,129 verified records** + **50,000 Tranco candidate domains** | PSL domains, tracking stripped, binary labels | MLP Baseline Model |
 
 > [!NOTE]
 > Phase 2 has successfully prepared **94,125 unique URLs** partitioned across **55,364 unique domains** with **zero domain leakage**. The raw corpus combines PhishTank (43k), Tranco (50k), PhreshPhish (1k HTML pairs), and OpenPhish (300).

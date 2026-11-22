@@ -1,25 +1,31 @@
 {
-  "corpus_overview": {
-    "total_records": 94125,
-    "unique_canonical_urls": 94125,
-    "unique_registrable_domains": 55364,
-    "legitimate_records": 50589,
-    "phishing_records": 43536,
-    "phishing_percentage": 46.25
+  "verified_url_corpus": {
+    "total_records": 44129,
+    "unique_canonical_urls": 44129,
+    "unique_registrable_domains": 6036,
+    "legitimate_records": 594,
+    "phishing_records": 43535,
+    "phishing_percentage": 98.65
+  },
+  "unverified_candidate_pool": {
+    "source": "Tranco Research Domains",
+    "total_candidate_urls": 50000,
+    "verification_status": "UNVERIFIED_CANDIDATE",
+    "is_mixed_with_ground_truth": false
   },
   "url_length_metrics": {
     "min_length": 13,
     "max_length": 3695,
-    "mean_length": 37.93,
-    "median_length": 23.0,
-    "std_length": 50.86
+    "mean_length": 56.77,
+    "median_length": 36.0,
+    "std_length": 69.5
   },
   "top_phishing_targets": {
     "Other": 39246,
     "Allegro": 1065,
     "Internal Revenue Service": 752,
     "Facebook": 335,
-    "Amazon.com": 230,
+    "Amazon.com": 229,
     "Microsoft": 214,
     "other": 212,
     "Optus": 115,
@@ -32,32 +38,83 @@
     "facebook": 37
   },
   "source_breakdown": {
-    "Tranco": 49995,
-    "PhishTank": 42862,
+    "PhishTank": 42861,
     "PhreshPhish": 977,
     "OpenPhish": 291
   },
+  "visual_corpus": {
+    "total_records": 1000,
+    "phishing_count": 800,
+    "legitimate_count": 200,
+    "unique_domains": 517,
+    "exact_duplicates": 65,
+    "near_duplicates": 161
+  },
+  "visual_dataset_readiness": {
+    "existing_screenshots": 8,
+    "newly_acquired_screenshots": 1000,
+    "total_local_screenshots_scanned": 1008,
+    "valid_screenshots_retained": 1008,
+    "blank_screenshots_dropped": 0,
+    "corrupt_screenshots_dropped": 0,
+    "actual_brand_reference_images_on_disk": 0,
+    "brands_with_actual_assets": 0,
+    "actual_brand_similarity_pairs_curated": 0,
+    "notes": "Empty brand workspaces are NOT counted as acquired image datasets."
+  },
+  "annotations_audit": {
+    "total_images_annotated": 0,
+    "manually_verified_count": 0,
+    "unverified_candidate_count": 0,
+    "total_yolo_boxes": 0,
+    "boxes_per_class": {},
+    "segmentation_masks_count": 0,
+    "invalid_annotations_count": 0
+  },
   "splits": {
     "train": {
-      "records": 66828,
-      "unique_domains": 38754,
-      "legitimate": 35393,
-      "phishing": 31435,
-      "phishing_percentage": 47.04
+      "records": 32157,
+      "unique_domains": 4224,
+      "legitimate": 435,
+      "phishing": 31722,
+      "phishing_percentage": 98.65
     },
     "validation": {
-      "records": 10374,
-      "unique_domains": 8304,
-      "legitimate": 7602,
-      "phishing": 2772,
-      "phishing_percentage": 26.72
+      "records": 7715,
+      "unique_domains": 904,
+      "legitimate": 77,
+      "phishing": 7638,
+      "phishing_percentage": 99.0
     },
     "test": {
-      "records": 16923,
-      "unique_domains": 8306,
-      "legitimate": 7594,
-      "phishing": 9329,
-      "phishing_percentage": 55.13
+      "records": 4257,
+      "unique_domains": 908,
+      "legitimate": 82,
+      "phishing": 4175,
+      "phishing_percentage": 98.07
+    }
+  },
+  "visual_splits": {
+    "train": {
+      "records": 624,
+      "unique_domains": 362,
+      "legitimate": 147,
+      "phishing": 477,
+      "phishing_percentage": 76.44
+    },
+    "validation": {
+      "records": 262,
+      "unique_domains": 76,
+      "legitimate": 26,
+      "phishing": 236,
+      "phishing_percentage": 90.08
+    },
+    "test": {
+      "records": 114,
+      "unique_domains": 79,
+      "legitimate": 27,
+      "phishing": 87,
+      "phishing_percentage": 76.32
     }
   }
 }

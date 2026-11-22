@@ -9,6 +9,7 @@ import ssl
 import time
 import urllib.error
 import urllib.request
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +39,22 @@ class ZenodoDownloader(BaseDownloader):
         req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=self.timeout, context=ctx) as resp:
             return json.loads(resp.read().decode("utf-8"))
+
+    def list_available_archives(self, record_id: str) -> list[dict[str, Any]]:
+        """Inspect and return available files, sizes (in MB), and checksums from a Zenodo record."""
+        meta = self.get_record_metadata(record_id)
+        archives = []
+        for f in meta.get("files", []):
+            size_mb = round(f.get("size", 0) / (1024 * 1024), 2)
+            archives.append({
+                "key": f.get("key"),
+                "size_bytes": f.get("size", 0),
+                "size_mb": size_mb,
+                "checksum": f.get("checksum"),
+                "is_zip": f.get("key", "").endswith(".zip") or f.get("key", "").endswith(".tar.gz"),
+                "download_url": f.get("links", {}).get("self"),
+            })
+        return archives
 
     def download_file_by_name(
         self,
@@ -134,3 +151,47 @@ class ZenodoDownloader(BaseDownloader):
             output_subdir="metadata",
             skip_existing=skip_existing,
         )
+
+    def download_and_extract_archive(
+        self,
+        record_id: str,
+        file_key: str,
+        extract_subdir: str = "screenshots",
+        skip_existing: bool = True,
+    ) -> tuple[DownloadResult, int]:
+        """Selectively download a screenshot archive, verify checksum, and extract safely."""
+        dl_res = self.download_file_by_name(
+            record_id=record_id,
+            file_key=file_key,
+            output_subdir="archives",
+            skip_existing=skip_existing,
+        )
+        if not dl_res.success or not dl_res.file_path:
+            return dl_res, 0
+
+        archive_path = Path(dl_res.file_path)
+        target_dir = self.raw_dir / extract_subdir
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        extracted_image_count = 0
+        try:
+            with zipfile.ZipFile(archive_path, "r") as zf:
+                # Safe path traversal check
+                for member in zf.infolist():
+                    member_path = (target_dir / member.filename).resolve()
+                    if not str(member_path).startswith(str(target_dir.resolve())):
+                        raise SecurityError(f"Attempted path traversal in ZIP archive: {member.filename}")
+                zf.extractall(path=target_dir)
+
+            # Count actual extracted images
+            for ext in [".png", ".jpg", ".jpeg", ".webp"]:
+                extracted_image_count += len(list(target_dir.rglob(f"*{ext}")))
+
+            logger.info(f"Safely extracted {file_key}: {extracted_image_count} verified images on disk.")
+            dl_res.extra_metadata["verified_images_count"] = extracted_image_count
+            self.record_provenance(dl_res)
+            return dl_res, extracted_image_count
+        except Exception as e:
+            logger.error(f"Failed to extract {archive_path.name}: {e}")
+            dl_res.error_message = f"Extraction failed: {e}"
+            return dl_res, 0

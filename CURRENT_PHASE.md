@@ -1,33 +1,24 @@
 # CURRENT_PHASE.md — Active Phase Status
 
 **Active Phase:** Phase 2 — Dataset Acquisition, Preparation, Annotation & Validation  
-**Phase Status:** COMPLETED  
+**Phase Status:** REVIEW & CORRECTIONS COMPLETED  
 **Transitioning To:** Phase 3 — Neural Network Mathematical Sandbox from Scratch  
 **Timestamp:** 2026-11-22  
 
 ---
 
-## 1. Phase 2 Deliverables & Progress Checklist
+## 1. Phase 2 Deliverables & Final Review Status
 
-| Milestone | Deliverable | File Path | Status | Verification Notes |
+| Item | Scope | File / Artifact | Review Status | Notes |
 | :--- | :--- | :--- | :--- | :--- |
-| **2A** | **Dataset Source Research** | [`DATASET_SOURCES.md`](file:///c:/Users/hp/PycharmProjects/pbl_dl/DATASET_SOURCES.md) | COMPLETED | Verified Zenodo, PhreshPhish, PhishTank, OpenPhish, URLhaus, Tranco. |
-| **2A** | **Auth & Secrets Template** | [`.env.example`](file:///c:/Users/hp/PycharmProjects/pbl_dl/.env.example) | COMPLETED | Keys documented for PhishTank, URLhaus, Zenodo. |
-| **2A** | **Curated Brand Gallery** | [`data/brands/reference_gallery/manifest_brands.json`](file:///c:/Users/hp/PycharmProjects/pbl_dl/data/brands/reference_gallery/manifest_brands.json) | COMPLETED | Master registry and directories for 18 monitored brands. |
-| **2A** | **Central Acquisition CLI** | [`scripts/datasets/download_all.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/scripts/datasets/download_all.py) | COMPLETED | Multi-source streaming downloaders with SHA-256 provenance tracking. |
-| **2A** | **Actual Raw Data Ingested**| `data/raw/urls/`, `data/raw/metadata/` | COMPLETED | 94,344 raw records ingested across PhishTank, Tranco, PhreshPhish, OpenPhish, Zenodo brands. |
-| **2B** | **Image Validation Engine** | [`scripts/datasets/validate_images.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/scripts/datasets/validate_images.py) | COMPLETED | Corrupt header detection, zero-byte detection, blank solid screenshot detection (std dev < 3.0), and Lanczos resampling. |
-| **2B** | **URL Normalizer** | [`scripts/datasets/normalize_urls.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/scripts/datasets/normalize_urls.py) | COMPLETED | Tracking parameter stripping (utm, fbclid), default port removal, PSL registrable domain extraction via `tldextract`. |
-| **2B** | **Deduplication Engine** | [`scripts/datasets/deduplicate.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/scripts/datasets/deduplicate.py) | COMPLETED | Cryptographic SHA-256 URL/image matching and 64-bit DCT perceptual hash (pHash) near-duplicate clustering. |
-| **2B** | **Unified Pipeline & Corpus** | [`scripts/datasets/preprocess_pipeline.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/scripts/datasets/preprocess_pipeline.py) | COMPLETED | Cleaned 94,125 URLs across 55,364 domains; saved to `corpus_normalized.parquet` & `corpus_normalized.csv`. |
-| **2B** | **Preprocessing Report** | [`data/reports/preprocessing_report.json`](file:///c:/Users/hp/PycharmProjects/pbl_dl/data/reports/preprocessing_report.json) | COMPLETED | Full telemetry of raw vs cleaned records, duplicate drop counts, class distribution (50.5k legit / 43.5k phish). |
-| **2C** | **Annotation Validator** | [`scripts/datasets/validate_annotations.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/scripts/datasets/validate_annotations.py) | COMPLETED | Validates YOLO detection bounding boxes (5 classes) and semantic segmentation masks (6 classes). |
-| **2C** | **Annotation Visualizer**| [`scripts/datasets/visualize_annotations.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/scripts/datasets/visualize_annotations.py) | COMPLETED | OpenCV/PIL visual overlay renderer for human review of bounding boxes and semantic segmentation masks. |
-| **2C** | **Annotation Manager** | [`scripts/datasets/generate_annotations.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/scripts/datasets/generate_annotations.py) | COMPLETED | Generates YOLO annotations, marks auto-generated labels as unverified, and creates previews. |
-| **2D** | **Domain-Aware Splitter** | [`scripts/datasets/generate_splits.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/scripts/datasets/generate_splits.py) | COMPLETED | Generates Train (70%), Val (15%), Test (15%) strictly partitioned by registrable domain with zero leakage proof. |
-| **2D** | **Dataset Profiler** | [`scripts/datasets/dataset_statistics.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/scripts/datasets/dataset_statistics.py) | COMPLETED | Computes statistical overview, URL length distribution, top brand targets; saved to `dataset_statistics.json`. |
-| **2D** | **Audit & Quality Reports**| [`DATASET_AUDIT.md`](file:///c:/Users/hp/PycharmProjects/pbl_dl/DATASET_AUDIT.md), [`DATASET_QUALITY_REPORT.md`](file:///c:/Users/hp/PycharmProjects/pbl_dl/DATASET_QUALITY_REPORT.md) | COMPLETED | Complete empirical audit and quality verification reports. |
-| **2D** | **Full Unit Test Suite** | `tests/test_dataset_*.py`, `tests/test_data_*.py`, `tests/test_annotations.py` | COMPLETED | 33 Phase 2 unit tests passing; 117 total unit tests passing in ~2.1s. |
+| **1. Label Integrity** | Label Parsing & Candidate Isolation | `scripts/datasets/normalize_urls.py`, `tranco_candidate_pool.parquet` | COMPLETED | Tranco domains isolated into candidate pool (`label=-1`, `verification_status="UNVERIFIED_CANDIDATE"`). Rejection of unknown/missing labels (`REJECTED_UNKNOWN`). |
+| **2. Zenodo Visual Acquisition** | Selective Download & Safe Extraction | `scripts/datasets/download_sources/zenodo.py` | COMPLETED | Selective downloading of specific archives, MD5 checksum verification, Zip-Slip traversal protection, actual extracted image counting. |
+| **3. Visual Dataset Readiness** | Empirical Local Asset Audit | `scripts/datasets/dataset_statistics.py` | COMPLETED | 8/8 valid local screenshots. Brand assets and pairs accurately reported as 0 on disk (empty folders not counted as acquired datasets). |
+| **4. Annotation Improvements** | Independent Box Validation & Segmentation | `scripts/datasets/validate_annotations.py` | COMPLETED | Fixed global errors-list bug; each box evaluated independently. Added `SegmentationMaskManager` (save, load, pair dimension validation). Strict separation of human-verified vs unverified annotations. |
+| **5. Domain-Aware Splitting** | Class-Stratified Zero-Leakage Partitions | `scripts/datasets/generate_splits.py` | COMPLETED | Stratified domain splitting with mathematical zero leakage. Total record conservation asserted (44,129 rows in -> 44,129 rows split). Temporal holdout splitter implemented. |
+| **6. URL Normalization** | Parser Hardening & Edge Cases | `scripts/datasets/normalize_urls.py` | COMPLETED | Strips userinfo, handles custom ports, parses IPv6 brackets, normalizes IDN punycode, preserves raw original URL and source label. |
+| **7. Final Verification** | Unit Tests & Documentation | `tests/`, `DATASET_AUDIT.md`, `DATASET_QUALITY_REPORT.md` | COMPLETED | 127/127 unit tests passing. Audits updated with truthful, empirically measured numbers. |
+| **8. Visual Dataset Integration** | Safe Extraction, Cataloging & Splits | `data/raw/external_dataset/`, `data/processed/screenshots/visual_corpus.parquet`, `data/splits/visual/` | COMPLETED | Extracted 2,894 files from `dataset.zip` safely (0 zip-slip, 0 forbidden binaries). Catalogued 1,000 valid screenshots (800 Phish, 200 Legit) across 517 domains. Created zero-leakage visual splits (Train: 547, Val: 274, Test: 179). 131 unit tests passing. |
 
 ---
 
@@ -35,11 +26,10 @@
 
 - [x] **Source Research & Provenance:** 6 target sources audited; cryptographic hashes logged in `provenance.json`.
 - [x] **Automated Acquisition:** Modular streaming downloaders with resume support and integrity verification.
-- [x] **Actual Datasets Acquired:** 94,344 raw records (PhishTank 43k, Tranco 50k, PhreshPhish 1k, OpenPhish 300, Zenodo brands).
-- [x] **Data Preprocessing & Cleaning:** Tracking noise stripped, default ports removed, PSL domains extracted.
-- [x] **Deduplication Engine:** SHA-256 for exact duplicates; 64-bit DCT pHash for near-duplicate visual screenshots.
-- [x] **Annotation Infrastructure:** Strict validators and visualizers for YOLO bounding boxes and segmentation masks.
-- [x] **Domain Leakage Prevention:** Verified 0 overlapping domains across Train, Val, and Test splits.
-- [x] **Documentation & Empirical Reports:** `DATASET_AUDIT.md`, `DATASET_SOURCES.md`, and `DATASET_QUALITY_REPORT.md` reflect actual measured numbers.
-- [x] **Zero Automated Model Training:** As strictly mandated, NO models were automatically trained. Training remains under manual user control.
-- [x] **Comprehensive Testing:** All unit tests pass with zero regressions.
+- [x] **Verified vs Unverified Data Separation:** 44,129 verified URLs in `corpus_normalized.parquet`; 50,000 unverified candidate domains in `tranco_candidate_pool.parquet`.
+- [x] **Visual Screenshot Acquisition & Validation:** 1,008 total valid screenshots on disk (1,000 newly acquired + 8 baseline; 804 Phish, 204 Legit; 0 corrupt, 0 blank).
+- [x] **Visual Dataset Preprocessing & Cataloging:** `data/processed/screenshots/visual_corpus.parquet` tracking dimensions, SHA-256, 64-bit DCT pHash, and canonical URLs.
+- [x] **Domain Leakage Prevention:** Verified 0 overlapping domains across Train, Val, and Test splits for both URL corpus and visual screenshot dataset.
+- [x] **Documentation & Empirical Reports:** `DATASET_MANIFEST.md`, `DATASET_AUDIT.md`, `DATASET_SOURCES.md`, and `DATASET_QUALITY_REPORT.md` reflect actual measured numbers.
+- [x] **Zero Automated Model Training:** As strictly mandated, NO models were automatically trained. Ready for Phase 3 ResNet screenshot classifier.
+- [x] **Comprehensive Testing:** 131 unit tests pass with zero failures.

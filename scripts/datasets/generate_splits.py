@@ -1,4 +1,4 @@
-"""Domain-Aware Leakage-Safe Dataset Splitting Engine."""
+"""Domain-Aware Class-Stratified Leakage-Safe Dataset Splitting Engine."""
 
 from __future__ import annotations
 
@@ -25,7 +25,9 @@ logger = logging.getLogger("phishvision.generate_splits")
 class SplitMetrics:
     """Statistical summary of an individual dataset split partition."""
     num_records: int
+    record_percentage: float
     num_domains: int
+    domain_percentage: float
     class_0_legitimate: int
     class_1_phishing: int
     phishing_ratio: float
@@ -42,10 +44,11 @@ class DatasetSplitsReport:
     test: SplitMetrics
     domain_leakage_detected: bool
     overlapping_domains_count: int
+    record_conservation_verified: bool
 
 
 class DomainAwareSplitter:
-    """Partitions datasets strictly by registrable domain to guarantee ZERO cross-split data leakage."""
+    """Partitions datasets strictly by registrable domain with class-aware stratification to guarantee ZERO cross-split data leakage."""
 
     def __init__(
         self,
@@ -79,29 +82,59 @@ class DomainAwareSplitter:
         self,
         df: pd.DataFrame,
         domain_column: str = "registrable_domain",
+        label_column: str = "label",
     ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, DatasetSplitsReport]:
-        """Perform stratified domain-level partitioning with deterministic random seed."""
+        """Perform class-stratified domain-level partitioning with deterministic random seed."""
         if domain_column not in df.columns:
             raise ValueError(f"Required domain column '{domain_column}' not found in dataframe")
+        if label_column not in df.columns:
+            raise ValueError(f"Required label column '{label_column}' not found in dataframe")
 
-        # Group domains and their aggregate class distribution
-        domain_stats = df.groupby(domain_column)["label"].agg(
+        df_work = df.copy()
+
+        # Handle missing or empty registrable domains explicitly
+        if df_work[domain_column].isna().any() or (df_work[domain_column].str.strip() == "").any():
+            logger.warning("Found records with missing registrable_domain; applying synthetic domain keys to prevent loss")
+            df_work[domain_column] = df_work.apply(
+                lambda row: row[domain_column]
+                if pd.notna(row.get(domain_column)) and str(row.get(domain_column)).strip()
+                else f"__missing_domain_{row.name}__",
+                axis=1,
+            )
+
+        # Aggregate record counts and labels per unique domain
+        domain_stats = df_work.groupby(domain_column)[label_column].agg(
             total_records="count",
             phish_records="sum",
         ).reset_index()
 
-        # Deterministic shuffle
+        # Determine dominant class for domain-level stratification
+        domain_stats["dominant_class"] = (
+            domain_stats["phish_records"] > (domain_stats["total_records"] / 2.0)
+        ).astype(int)
+
         np.random.seed(self.random_seed)
-        shuffled_indices = np.random.permutation(len(domain_stats))
-        shuffled_domains = domain_stats.iloc[shuffled_indices]
 
-        n_domains = len(shuffled_domains)
-        n_train = int(n_domains * self.train_ratio)
-        n_val = int(n_domains * self.val_ratio)
+        train_dom_set: set[str] = set()
+        val_dom_set: set[str] = set()
+        test_dom_set: set[str] = set()
 
-        train_dom_set = set(shuffled_domains.iloc[:n_train][domain_column])
-        val_dom_set = set(shuffled_domains.iloc[n_train : n_train + n_val][domain_column])
-        test_dom_set = set(shuffled_domains.iloc[n_train + n_val :][domain_column])
+        # Stratified allocation across dominant classes
+        for cls_val in [0, 1]:
+            subset = domain_stats[domain_stats["dominant_class"] == cls_val].copy()
+            if subset.empty:
+                continue
+
+            shuffled_indices = np.random.permutation(len(subset))
+            shuffled = subset.iloc[shuffled_indices]
+
+            n = len(shuffled)
+            n_tr = int(n * self.train_ratio)
+            n_va = int(n * self.val_ratio)
+
+            train_dom_set.update(shuffled.iloc[:n_tr][domain_column])
+            val_dom_set.update(shuffled.iloc[n_tr : n_tr + n_va][domain_column])
+            test_dom_set.update(shuffled.iloc[n_tr + n_va :][domain_column])
 
         # Verify zero domain leakage
         no_leak, leakages = self.verify_no_domain_leakage(train_dom_set, val_dom_set, test_dom_set)
@@ -109,18 +142,34 @@ class DomainAwareSplitter:
             raise AssertionError(f"CRITICAL: Domain leakage detected across splits: {list(leakages)[:10]}")
 
         # Partition dataframe rows by domain membership
-        df_train = df[df[domain_column].isin(train_dom_set)].copy()
-        df_val = df[df[domain_column].isin(val_dom_set)].copy()
-        df_test = df[df[domain_column].isin(test_dom_set)].copy()
+        df_train = df_work[df_work[domain_column].isin(train_dom_set)].copy()
+        df_val = df_work[df_work[domain_column].isin(val_dom_set)].copy()
+        df_test = df_work[df_work[domain_column].isin(test_dom_set)].copy()
+
+        # Strict conservation assertion: every input record must appear in exactly one split
+        total_input_len = len(df_work)
+        total_split_len = len(df_train) + len(df_val) + len(df_test)
+        if total_input_len != total_split_len:
+            raise AssertionError(
+                f"Record conservation failed: {total_input_len} input rows != {total_split_len} split rows"
+            )
+
+        union_indices = set(df_train.index).union(set(df_val.index)).union(set(df_test.index))
+        if len(union_indices) != total_input_len:
+            raise AssertionError("Duplicate or disjoint index mismatch across split partitions")
+
+        total_domains_count = len(domain_stats)
 
         def _get_metrics(df_sub: pd.DataFrame, dom_set: set[str]) -> SplitMetrics:
-            c0 = int((df_sub["label"] == 0).sum())
-            c1 = int((df_sub["label"] == 1).sum())
+            c0 = int((df_sub[label_column] == 0).sum())
+            c1 = int((df_sub[label_column] == 1).sum())
             total = len(df_sub)
             ratio = round(c1 / max(total, 1), 4)
             return SplitMetrics(
                 num_records=total,
+                record_percentage=round((total / max(total_input_len, 1)) * 100, 2),
                 num_domains=len(dom_set),
+                domain_percentage=round((len(dom_set) / max(total_domains_count, 1)) * 100, 2),
                 class_0_legitimate=c0,
                 class_1_phishing=c1,
                 phishing_ratio=ratio,
@@ -128,21 +177,41 @@ class DomainAwareSplitter:
 
         report = DatasetSplitsReport(
             random_seed=self.random_seed,
-            total_records=len(df),
-            total_domains=n_domains,
+            total_records=total_input_len,
+            total_domains=total_domains_count,
             train=_get_metrics(df_train, train_dom_set),
             val=_get_metrics(df_val, val_dom_set),
             test=_get_metrics(df_test, test_dom_set),
             domain_leakage_detected=not no_leak,
             overlapping_domains_count=len(leakages),
+            record_conservation_verified=True,
         )
 
         logger.info(
-            f"Domain-aware split completed: Train={len(df_train)} ({report.train.num_domains} doms), "
+            f"Class-aware domain split complete: "
+            f"Train={len(df_train)} ({report.train.num_domains} doms), "
             f"Val={len(df_val)} ({report.val.num_domains} doms), "
             f"Test={len(df_test)} ({report.test.num_domains} doms) | Leakage=0"
         )
         return df_train, df_val, df_test, report
+
+    @staticmethod
+    def split_by_temporal_holdout(
+        df: pd.DataFrame,
+        timestamp_column: str = "collection_timestamp",
+        test_ratio: float = 0.15,
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Split records based on chronological timestamp ordering for temporal generalization testing."""
+        if timestamp_column not in df.columns:
+            raise ValueError(f"Timestamp column '{timestamp_column}' not found")
+
+        df_valid_ts = df[df[timestamp_column].notna()].copy()
+        df_valid_ts = df_valid_ts.sort_values(by=timestamp_column)
+
+        cutoff_idx = int(len(df_valid_ts) * (1.0 - test_ratio))
+        train_df = df_valid_ts.iloc[:cutoff_idx]
+        test_df = df_valid_ts.iloc[cutoff_idx:]
+        return train_df, test_df
 
 
 def main() -> None:
@@ -181,16 +250,26 @@ def main() -> None:
         json.dump(asdict(report), f, indent=2)
     logger.info(f"Split metadata written to {meta_file}")
 
-    print("\n" + "=" * 75)
-    print("🛡️  DOMAIN-AWARE LEAKAGE-SAFE SPLITTING COMPLETE")
-    print("=" * 75)
+    print("\n" + "=" * 80)
+    print("🛡️  DOMAIN-AWARE CLASS-STRATIFIED LEAKAGE-SAFE SPLITTING COMPLETE")
+    print("=" * 80)
     print(f"• Fixed Random Seed       : {report.random_seed}")
-    print(f"• Total Records           : {report.total_records} across {report.total_domains} unique domains")
-    print(f"• Train Split (70%)       : {report.train.num_records} URLs | {report.train.num_domains} domains | Legit: {report.train.class_0_legitimate}, Phish: {report.train.class_1_phishing}")
-    print(f"• Validation Split (15%)  : {report.val.num_records} URLs | {report.val.num_domains} domains | Legit: {report.val.class_0_legitimate}, Phish: {report.val.class_1_phishing}")
-    print(f"• Test Split (15%)        : {report.test.num_records} URLs | {report.test.num_domains} domains | Legit: {report.test.class_0_legitimate}, Phish: {report.test.class_1_phishing}")
+    print(f"• Total Records Conserved : {report.total_records} across {report.total_domains} unique domains")
+    print(
+        f"• Train Split (70%)       : {report.train.num_records} URLs ({report.train.record_percentage}%) | "
+        f"{report.train.num_domains} doms ({report.train.domain_percentage}%) | Legit: {report.train.class_0_legitimate}, Phish: {report.train.class_1_phishing}"
+    )
+    print(
+        f"• Validation Split (15%)  : {report.val.num_records} URLs ({report.val.record_percentage}%) | "
+        f"{report.val.num_domains} doms ({report.val.domain_percentage}%) | Legit: {report.val.class_0_legitimate}, Phish: {report.val.class_1_phishing}"
+    )
+    print(
+        f"• Test Split (15%)        : {report.test.num_records} URLs ({report.test.record_percentage}%) | "
+        f"{report.test.num_domains} doms ({report.test.domain_percentage}%) | Legit: {report.test.class_0_legitimate}, Phish: {report.test.class_1_phishing}"
+    )
     print(f"• Domain Leakage Check    : {'✅ PASSED (0 Overlapping Domains)' if not report.domain_leakage_detected else '❌ FAILED'}")
-    print("=" * 75)
+    print(f"• Record Conservation     : {'✅ VERIFIED (Exact Count Matched)' if report.record_conservation_verified else '❌ FAILED'}")
+    print("=" * 80)
 
 
 if __name__ == "__main__":

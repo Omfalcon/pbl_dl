@@ -1,17 +1,19 @@
 {
-  "timestamp": "2026-11-22T07:25:16Z",
-  "duration_seconds": 3.41,
+  "timestamp": "2026-11-22T08:02:41Z",
+  "duration_seconds": 4.69,
   "urls": {
-    "raw_ingested": 94344,
-    "unique_retained": 94125,
-    "exact_duplicates_removed": 219,
-    "unique_registrable_domains": 55364,
-    "class_distribution": {
-      "Legitimate": 50589,
-      "Phishing": 43536
+    "verified_raw_ingested": 44344,
+    "verified_unique_retained": 44129,
+    "verified_duplicates_removed": 215,
+    "verified_unique_registrable_domains": 6036,
+    "verified_class_distribution": {
+      "Phishing": 43535,
+      "Legitimate": 594
     },
-    "output_parquet": "data\\processed\\urls\\corpus_normalized.parquet",
-    "output_csv": "data\\processed\\urls\\corpus_normalized.csv"
+    "unverified_candidate_pool_size": 50000,
+    "rejected_unknown_count": 0,
+    "output_verified_parquet": "data\\processed\\urls\\corpus_normalized.parquet",
+    "output_candidates_parquet": "data\\processed\\urls\\tranco_candidate_pool.parquet"
   },
   "images": {
     "total_scanned": 8,

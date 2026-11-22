@@ -14,15 +14,18 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
 
 - **Phase 0 (System Architecture & Requirements):** COMPLETED.
 - **Phase 1 & Phase 1.1 (Repository Foundation, Scanner Implementation & Security Hardening):** COMPLETED.
-- **Phase 2 (Dataset Acquisition, Preparation, Annotation & Validation):** COMPLETED.
-  - All 4 Milestones (2A, 2B, 2C, 2D) fully implemented, validated, and verified.
-  - Raw feeds ingested: PhishTank (43k), Tranco (50k), PhreshPhish (1k), OpenPhish (300), Zenodo brands (86).
-  - Cleaned & normalized master corpus: **94,125 unique records** (50,589 Legitimate vs 43,536 Phishing) across **55,364 domains**.
-  - Curated Brand Reference Gallery established for 18 target brands.
-  - Annotation validation and visualization suite operational for YOLO bounding boxes (5 classes) and semantic segmentation masks (6 classes).
-  - Domain-aware leakage-safe splitting generated Train (70%), Val (15%), Test (15%) with **mathematically verified 0 domain leakage**.
+- **Phase 2 (Dataset Acquisition, Preparation, Annotation & Validation):** COMPLETED (INCLUDING FINAL VISUAL DATASET INTEGRATION).
+  - All 4 Milestones (2A, 2B, 2C, 2D) fully implemented, validated, and hardened through code review and empirical visual acquisition.
+  - Raw feeds ingested: PhishTank (43k), Tranco (50k), PhreshPhish (1k), OpenPhish (300), Zenodo brands (86), and External Visual Dataset (1,000 screenshots).
+  - Ground-truth separation: **44,129 verified URL records** (43,535 Phishing, 594 Legitimate) in `corpus_normalized.parquet`; **50,000 unverified candidate domains** isolated in `tranco_candidate_pool.parquet`.
+  - Visual Dataset: **1,008 total valid screenshots on disk** (804 Phishing, 204 Legitimate; 1,000 external + 8 scanner baseline). Catalogued into `data/processed/screenshots/visual_corpus.parquet`.
+  - Curated Brand Reference Gallery established for 18 target brands (0 local image assets on disk accurately audited).
+  - Annotation validation and visualization suite operational for YOLO bounding boxes (independent box evaluation) and semantic segmentation masks (`SegmentationMaskManager` for image-mask pairing).
+  - Domain-aware leakage-safe splitting generated:
+    - URL Splits: Train (32,157 records), Val (7,715 records), Test (4,257 records) with **0 domain leakage**.
+    - Visual Splits: Train (547 screenshots), Val (274 screenshots), Test (179 screenshots) with **0 domain leakage**.
   - Comprehensive statistical profile exported to `data/reports/dataset_statistics.json`.
-  - **Full test suite: 117 unit tests passing in 2.1s**. Zero regressions. Zero automated model training.
+  - **Full test suite: 131 unit tests passing in ~5.4s**. Zero regressions. Zero automated model training.
 
 ---
 

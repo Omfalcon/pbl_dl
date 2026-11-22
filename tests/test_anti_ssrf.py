@@ -24,12 +24,13 @@ class TestAntiSSRFValidation:
         ],
     )
     def test_valid_public_urls(self, url: str):
-        result = validate_url_and_resolve(url)
-        assert result.is_valid is True
-        assert result.error_code is None
-        assert len(result.resolved_ips) > 0
-        assert result.pinned_ip is not None
-        assert result.canonical_url.startswith(("http://", "https://"))
+        with patch("app.scanner.anti_ssrf.resolve_hostname_ips", return_value=["93.184.216.34"]):
+            result = validate_url_and_resolve(url)
+            assert result.is_valid is True
+            assert result.error_code is None
+            assert len(result.resolved_ips) > 0
+            assert result.pinned_ip == "93.184.216.34"
+            assert result.canonical_url.startswith(("http://", "https://"))
 
     @pytest.mark.parametrize(
         "url,expected_code",
@@ -236,9 +237,10 @@ class TestAntiSSRFValidation:
 
     def test_redirect_destination_validation(self):
         # Valid public redirect
-        r1 = validate_redirect_target("/safe-page", base_url="https://example.com")
-        assert r1.is_valid is True
-        assert r1.canonical_url == "https://example.com/safe-page"
+        with patch("app.scanner.anti_ssrf.resolve_hostname_ips", return_value=["93.184.216.34"]):
+            r1 = validate_redirect_target("/safe-page", base_url="https://example.com")
+            assert r1.is_valid is True
+            assert r1.canonical_url == "https://example.com/safe-page"
 
         # Invalid redirect to private LAN
         r2 = validate_redirect_target("http://192.168.1.1/admin", base_url="https://example.com")

@@ -137,14 +137,67 @@ class TestURLNormalizer:
 
     def test_label_parsing(self):
         norm = URLNormalizer()
-        assert norm.parse_label("benign") == 0
-        assert norm.parse_label("legitimate") == 0
-        assert norm.parse_label("not-phishing") == 0
-        assert norm.parse_label(0) == 0
+        # Verified Legitimate mappings
+        assert norm.parse_label("benign") == (0, "VERIFIED")
+        assert norm.parse_label("legitimate") == (0, "VERIFIED")
+        assert norm.parse_label("not-phishing") == (0, "VERIFIED")
+        assert norm.parse_label(0) == (0, "VERIFIED")
 
-        assert norm.parse_label("phish") == 1
-        assert norm.parse_label("phishing") == 1
-        assert norm.parse_label(1) == 1
+        # Verified Phishing mappings
+        assert norm.parse_label("phish") == (1, "VERIFIED")
+        assert norm.parse_label("phishing") == (1, "VERIFIED")
+        assert norm.parse_label(1) == (1, "VERIFIED")
+
+        # Unverified Candidate pool
+        assert norm.parse_label("candidate") == (-1, "UNVERIFIED_CANDIDATE")
+        assert norm.parse_label("tranco_candidate") == (-1, "UNVERIFIED_CANDIDATE")
+        assert norm.parse_label(-1) == (-1, "UNVERIFIED_CANDIDATE")
+
+        # Unknown / Missing / Malformed - MUST NOT default to phishing!
+        assert norm.parse_label(None) == (None, "REJECTED_UNKNOWN")
+        assert norm.parse_label("") == (None, "REJECTED_UNKNOWN")
+        assert norm.parse_label("unknown") == (None, "REJECTED_UNKNOWN")
+        assert norm.parse_label("pending") == (None, "REJECTED_UNKNOWN")
+        assert norm.parse_label("nan") == (None, "REJECTED_UNKNOWN")
+        assert norm.parse_label(999) == (None, "REJECTED_UNKNOWN")
+        assert norm.parse_label("some_arbitrary_string") == (None, "REJECTED_UNKNOWN")
+
+    def test_url_normalization_edge_cases(self):
+        norm = URLNormalizer()
+
+        # 1. Userinfo stripping
+        rec = norm.normalize("https://admin:secret123@example.com/dashboard", label=1)
+        assert rec is not None
+        assert "secret123" not in rec.canonical_url
+        assert "admin@" not in rec.canonical_url
+        assert rec.canonical_url == "https://example.com/dashboard"
+        assert rec.original_url == "https://admin:secret123@example.com/dashboard"
+
+        # 2. Non-standard ports preserved vs default ports removed
+        rec_custom_port = norm.normalize("https://example.com:8443/api")
+        assert rec_custom_port is not None
+        assert rec_custom_port.port == 8443
+        assert rec_custom_port.canonical_url == "https://example.com:8443/api"
+
+        # 3. IPv6 literal handling
+        rec_ipv6 = norm.normalize("http://[2001:db8::1]:8080/path")
+        assert rec_ipv6 is not None
+        assert "[2001:db8::1]" in rec_ipv6.hostname or "2001:db8::1" in rec_ipv6.hostname
+        assert rec_ipv6.port == 8080
+        assert ":8080" in rec_ipv6.canonical_url
+
+        # 4. IDN Punycode normalization
+        rec_idn = norm.normalize("https://münchen.de/info")
+        assert rec_idn is not None
+        assert "xn--" in rec_idn.canonical_url or "xn--mnchen-3ya.de" in rec_idn.hostname
+
+        # 5. Provenance and raw_label preservation
+        rec_prov = norm.normalize("https://phish.target.com/login", label="phishing", source="phishtank")
+        assert rec_prov is not None
+        assert rec_prov.raw_label == "phishing"
+        assert rec_prov.label == 1
+        assert rec_prov.verification_status == "VERIFIED"
+        assert rec_prov.source == "phishtank"
 
 
 class TestDatasetDeduplicator:

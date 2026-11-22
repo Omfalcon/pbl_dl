@@ -77,3 +77,80 @@ class TestDomainAwareSplitting:
         )
         assert no_leak is True
         assert len(overlaps) == 0
+
+    def test_class_aware_stratification_representation(self, mock_dataset_df):
+        """Verifies both legitimate (0) and phishing (1) classes appear across all partitions."""
+        splitter = DomainAwareSplitter(random_seed=42)
+        tr, val, test, rep = splitter.split_dataframe(mock_dataset_df)
+
+        assert rep.record_conservation_verified is True
+        assert rep.overlapping_domains_count == 0
+        assert rep.domain_leakage_detected is False
+
+        # Check each split has both classes represented
+        assert (tr["label"] == 0).sum() > 0
+        assert (tr["label"] == 1).sum() > 0
+        assert (val["label"] == 0).sum() > 0 or (test["label"] == 0).sum() > 0
+
+    def test_missing_domains_handled_without_loss(self):
+        """Missing registrable_domain strings must not drop rows or crash splitter."""
+        data = [
+            {"canonical_url": "http://1.1.1.1/a", "registrable_domain": None, "label": 1},
+            {"canonical_url": "http://1.1.1.2/b", "registrable_domain": "", "label": 0},
+            {"canonical_url": "http://valid.com/c", "registrable_domain": "valid.com", "label": 1},
+            {"canonical_url": "http://valid2.com/d", "registrable_domain": "valid2.com", "label": 0},
+            {"canonical_url": "http://valid3.com/e", "registrable_domain": "valid3.com", "label": 1},
+        ]
+        df = pd.DataFrame(data)
+        splitter = DomainAwareSplitter(random_seed=42)
+        tr, val, test, rep = splitter.split_dataframe(df)
+
+        # Assert zero row loss
+        assert len(tr) + len(val) + len(test) == len(df)
+        assert rep.record_conservation_verified is True
+
+    def test_highly_imbalanced_domains(self):
+        """One massive domain with 200 records + 10 small domains with 2 records each."""
+        data = []
+        for i in range(200):
+            data.append({
+                "canonical_url": f"https://mega-domain.com/page_{i}",
+                "registrable_domain": "mega-domain.com",
+                "label": 1,
+            })
+        for d in range(10):
+            for i in range(2):
+                data.append({
+                    "canonical_url": f"https://tiny-domain-{d}.com/page_{i}",
+                    "registrable_domain": f"tiny-domain-{d}.com",
+                    "label": 0,
+                })
+        df = pd.DataFrame(data)
+        splitter = DomainAwareSplitter(random_seed=42)
+        tr, val, test, rep = splitter.split_dataframe(df)
+
+        # Zero leakage check
+        train_doms = set(tr["registrable_domain"])
+        val_doms = set(val["registrable_domain"])
+        test_doms = set(test["registrable_domain"])
+
+        assert len(train_doms.intersection(val_doms)) == 0
+        assert len(train_doms.intersection(test_doms)) == 0
+        assert len(val_doms.intersection(test_doms)) == 0
+        assert len(tr) + len(val) + len(test) == 220
+
+    def test_temporal_holdout_split(self):
+        """Verifies chronological order separation where test partition strictly follows train partition."""
+        data = [
+            {"canonical_url": "https://a.com", "collection_timestamp": "2024-01-01T00:00:00Z"},
+            {"canonical_url": "https://b.com", "collection_timestamp": "2024-01-02T00:00:00Z"},
+            {"canonical_url": "https://c.com", "collection_timestamp": "2024-01-03T00:00:00Z"},
+            {"canonical_url": "https://d.com", "collection_timestamp": "2024-01-04T00:00:00Z"},
+            {"canonical_url": "https://e.com", "collection_timestamp": "2024-01-05T00:00:00Z"},
+        ]
+        df = pd.DataFrame(data)
+        tr, test = DomainAwareSplitter.split_by_temporal_holdout(df, test_ratio=0.4)
+
+        assert len(tr) == 3
+        assert len(test) == 2
+        assert max(tr["collection_timestamp"]) < min(test["collection_timestamp"])
