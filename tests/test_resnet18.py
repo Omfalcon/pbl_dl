@@ -192,6 +192,21 @@ class TestScreenshotDataset:
             assert weights.shape == (2,)
             assert weights[0] > weights[1]
 
+            # Verify with explicit preprocessing parameters
+            ds_custom = ScreenshotDataset(
+                data_source=df,
+                repo_root=tmp_path,
+                crop_strategy="top_viewport",
+                image_size=224,
+                viewport_ratio=1.0,
+                is_training=True,
+                horizontal_flip=True,
+                color_jitter=True,
+            )
+            assert len(ds_custom) == 3
+            t_custom, _, _ = ds_custom[0]
+            assert t_custom.shape == (3, 224, 224)
+
     def test_actual_visual_splits_integrity_on_disk(self):
         """Verifies physical split files on disk preserve zero leakage."""
         train_file = Path("data/splits/visual/train.parquet")

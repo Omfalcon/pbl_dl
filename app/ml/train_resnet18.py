@@ -151,6 +151,7 @@ def main() -> None:
         viewport_ratio=prep_cfg.get("viewport_ratio", 1.0),
         is_training=True,
         horizontal_flip=prep_cfg.get("horizontal_flip", False),
+        color_jitter=prep_cfg.get("color_jitter", False),
     )
     logger.info(f"Train Dataset Summary: {train_dataset.get_summary()}")
 

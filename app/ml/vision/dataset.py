@@ -30,12 +30,18 @@ class ScreenshotDataset(Dataset):
         transform: Callable[[Image.Image], torch.Tensor] | None = None,
         crop_strategy: str = "top_viewport",
         image_size: int = 224,
+        viewport_ratio: float = 1.0,
         is_training: bool = False,
         horizontal_flip: bool = False,
+        color_jitter: bool = False,
         handle_invalid: str = "fallback",  # "fallback" or "raise"
     ) -> None:
         self.repo_root = Path(repo_root).resolve()
         self.handle_invalid = handle_invalid
+        self.crop_strategy = crop_strategy
+        self.image_size = image_size
+        self.viewport_ratio = viewport_ratio
+        self.is_training = is_training
 
         # Load DataFrame
         if isinstance(data_source, pd.DataFrame):
@@ -59,8 +65,10 @@ class ScreenshotDataset(Dataset):
             self.transform = build_transforms(
                 crop_strategy=crop_strategy,
                 image_size=image_size,
+                viewport_ratio=viewport_ratio,
                 is_training=is_training,
                 horizontal_flip=horizontal_flip,
+                color_jitter=color_jitter,
             )
 
         # Identify image path and label columns
