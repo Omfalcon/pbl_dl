@@ -74,11 +74,8 @@ Visual intelligence forms the central empirical contribution of PhishVision AI. 
   - Trainer: [`app/ml/vision/trainer.py`](app/ml/vision/trainer.py)
   - Inference: [`app/ml/vision/inference.py`](app/ml/vision/inference.py)
   - CLI & Config: [`configs/resnet18.yaml`](configs/resnet18.yaml), [`app/ml/train_resnet18.py`](app/ml/train_resnet18.py)
-- **Status:** **Implementation and Unit Testing Complete (15 passed). Training execution pending manual trigger.**
-- **Manual Training Command:**
-  ```powershell
-  & "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.train_resnet18 --config configs/resnet18.yaml
-  ```
+- **Status:** **TRAINED & EVALUATED (Best validation checkpoint: Epoch 9, Val Macro F1 = 0.7037, `models/checkpoints/resnet18/best_model.pt`).**
+- **Evaluation Outputs:** Multi-region diagnostics and visual contact sheets (`data/reports/resnet18/`).
 
 ---
 
@@ -100,12 +97,8 @@ Visual intelligence forms the central empirical contribution of PhishVision AI. 
   - 116 authentic pairs (46 positive, 70 negative) from `data/brands/manifest_siamese_pairs.csv` across all 18 target brands (33 authentic assets).
   - Partitioned with verified zero-leakage into `data/splits/siamese/`: Train (73 pairs across 12 brands), Val (23 pairs across 3 brands), Test (20 pairs across 3 brands).
   - Acquisition pipeline: `scripts/datasets/run_brand_acquisition.py` and `app/ml/vision/brand_pairs.py`.
-- **Implementation Status:** COMPLETE & READY TO TRAIN (Assets acquired, pairs partitioned, zero training executed).
-- **Execution Command (when assets acquired):**
-  ```powershell
-  & "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.train_siamese --config configs/siamese.yaml
-  ```
-- **Evaluation Metrics:** Top-1 Retrieval Accuracy ($\ge 0.92$), Area Under the ROC Curve, Precision, Recall, Macro F1 at $\tau = 0.82$, False Match Rate (FMR $\le 0.01$).
+- **Implementation Status:** **TRAINED & EVALUATED ON UNTOUCHED TEST SET (`models/checkpoints/siamese/best_siamese.pt`, Accuracy = 85.0%, Precision = 1.0000, ROC-AUC = 0.8750).**
+- **Evaluation Outputs:** Detailed metrics and confusion matrices documented in [`data/reports/siamese/TEST_EVALUATION.md`](data/reports/siamese/TEST_EVALUATION.md).
 
 ---
 
@@ -226,6 +219,10 @@ Visual intelligence forms the central empirical contribution of PhishVision AI. 
 - **Class Imbalance Strategy:**
   - Balanced class weighting in BCE loss ($w_0 = 36.96$ for Legitimate, $w_1 = 0.5068$ for Phishing) to handle 72.9:1 class imbalance without synthetic data fabrication.
   - Decision threshold $\tau$ calibrated strictly on validation set.
+- **Trained Checkpoint & Evaluation:**
+  - Checkpoint: `models/checkpoints/lstm/best_lstm.pt` (calibrated threshold $\tau = 0.010$).
+  - Evaluated on holdout test set (4,257 samples across 908 unseen domains): Accuracy = 0.9869, ROC-AUC = 0.9666, PR-AUC = 0.9991, Macro F1 = 0.7779, Phishing F1 = 0.9933, Legitimate F1 = 0.5625.
+  - Full report documented in [`data/reports/lstm/LSTM_EXPERIMENT_REPORT.md`](data/reports/lstm/LSTM_EXPERIMENT_REPORT.md).
 - **Execution Commands:**
   - Training:
     ```powershell
@@ -235,7 +232,6 @@ Visual intelligence forms the central empirical contribution of PhishVision AI. 
     ```powershell
     & "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.train_lstm --config configs/lstm.yaml --eval-only
     ```
-- **Evaluation Outputs:** Accuracy, Precision, Recall, Macro F1, ROC-AUC, PR-AUC, Confusion Matrix, Latency, and side-by-side comparison with M-01 Lexical MLP (`data/reports/lstm/`).
 
 ---
 

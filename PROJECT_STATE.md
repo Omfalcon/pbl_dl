@@ -86,20 +86,27 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
   - Programmatic geometric polygon dataset (`data/synthetic_yolo_seg/`). Trained YOLOv8n-seg (`models/checkpoints/yolov8n_seg_synthetic/run1/weights/best.pt`) achieving Box mAP50 = 0.9950, Mask mAP50 = 0.9950.
 - **Phase 7.8 (M-07 URL Sequence Bi-LSTM):** COMPLETED.
   - Bidirectional LSTM with AttentionPooling (`models/checkpoints/lstm/best_lstm.pt`) achieving test Accuracy = 0.9869, ROC-AUC = 0.9666, PR-AUC = 0.9991, Macro F1 = 0.7779.
-- **Phase 8 (Seven-Model Multimodal Integration & Spatial Consensus):** COMPLETED & VERIFIED.
-  - Unified pipeline (`app/ml/unified_pipeline.py`) integrating all 7 models.
-  - Non-duplicative spatial consensus engine (`app/ml/vision/spatial_consensus.py`) merging M-04, M-05, and M-06 via IoU clustering ($\text{IoU} \ge 0.45$).
-  - Calibrated risk normalization for cost-sensitive models (M-01 $\tau=0.05$, M-07 $\tau=0.01$).
+- **Phase 8 (Seven-Model Multimodal Integration, Backend Completion & Calibrated Risk Fusion):** COMPLETED & VERIFIED.
+  - Unified pipeline (`app/ml/unified_pipeline.py`) integrating all 7 models with transparent physical checkpoint existence inspection (`get_checkpoint_status()`) and environment variable overrides.
+  - Scanner-to-ML adapter (`app/scanner/adapter.py`) bridging Playwright scanner models (`ScanResult`, `RedirectHop`, `FormInfo`) with `UnifiedPhishingPipeline.analyze()`.
+  - Production FastAPI REST API (`app/main.py`, `app/api/v1/`) fully implementing endpoints per `API_CONTRACTS.md` (`POST /api/v1/scan`, `GET /api/v1/scan/{scan_id}`, `GET /api/v1/scan/{scan_id}/report`, `GET /api/v1/scan/{scan_id}/screenshot`, `GET /api/v1/brands`, `GET /api/v1/health`, `POST /api/v1/analyze/url`, `POST /api/v1/analyze/brand-similarity`).
+  - External checkpoint deployment manager (`scripts/download_checkpoints.py`) verifying all 9 model weights and auxiliary preprocessors on disk without tracking large binaries in git.
+  - Non-duplicative spatial consensus engine (`app/ml/vision/spatial_consensus.py`) merging M-04, M-05, and M-06 via IoU clustering ($\text{IoU} \ge 0.45$) and filtering oversized background boxes (> 45% image area).
+  - Risk fusion false positive resolution: resolved empty/404 false positive on `cloudsupport-knowledge.org` (now correctly `SUSPICIOUS 0.40`) and clean legitimate false positive on `t.me` (now correctly `LEGITIMATE 0.30`).
   - Preserved UNKNOWN fallback, anti-SSRF protections, brand whitelist, and critical brand impersonation override.
-  - Automated verification: **74/74 unit and regression tests passing (100%)**.
+  - Automated verification: **89/89 unit, integration, and regression tests passing (100%)**.
 
 ---
 
 ## 2. Current State Snapshot
 
-- **Active Phase:** `Phase 8` (Seven-Model Multimodal Integration Completed)
-- **Target Next Step:** Phase 9 (Interactive Dashboard / Forensic UI & Production API Deployment)
+- **Active Phase:** `Phase 8` (Seven-Model Multimodal Integration & Backend Completion Completed)
+- **Target Next Step:** Phase 9 (Interactive Dashboard / Forensic UI & Production Deployment)
 - **Working Modules:**
+  - `app.main`: FastAPI root application entry point with lifespan management, CORS, and endpoint mounting.
+  - `app.api.v1.endpoints`: FastAPI REST API routes implementing `API_CONTRACTS.md`.
+  - `app.scanner.adapter`: Ingestion adapter converting scanner forensic output into unified ML pipeline types.
+  - `scripts.download_checkpoints`: Checkpoint verification and remote download manager.
   - `app.ml.unified_pipeline`: Unified production engine integrating all 7 neural pipelines (M-01 through M-07) with calibrated multi-evidence risk fusion.
   - `app.ml.vision.spatial_consensus`: Spatial clustering and deduplication engine merging M-04, M-05, and M-06 bounding boxes and instance segmentation masks.
   - `app.ml.vision.multimodal_pipeline`: Master multimodal phishing detection pipeline with 100% backward compatibility for Phase 7.5 API contracts.

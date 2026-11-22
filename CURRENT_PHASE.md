@@ -17,33 +17,57 @@
 - Phase 7.6: M-05 Faster R-CNN Object Detection Implementation & Benchmark Scaffolding (COMPLETED & VERIFIED)
 - Phase 7.7: M-06 YOLOv8n-Seg Instance Segmentation Training & Test Evaluation (COMPLETED, Box mAP50=0.9950, Mask mAP50=0.9950)
 - Phase 7.8: M-07 URL Sequence LSTM Training, Evaluation & Targeted Audit (COMPLETED, Accuracy=0.9869, ROC-AUC=0.9666, PR-AUC=0.9991, Macro F1=0.7779)
-- Phase 8: Seven-Model Multimodal Integration, Spatial Consensus Engine, and Calibrated Risk Fusion (COMPLETED)
-**Target Next Milestone:** Phase 9 — Interactive Dashboard / Forensic UI & Production API Deployment  
+- Phase 8: Seven-Model Multimodal Integration, Backend Completion, and Calibrated Risk Fusion (COMPLETED)
+**Target Next Milestone:** Phase 9 — Interactive Dashboard / Forensic UI & Production Deployment  
 **Timestamp:** 2026-11-23  
 
 ---
 
-## 1. Phase 8 Seven-Model Integration Summary
+## 1. Phase 8 Seven-Model Integration & Backend Completion Summary
 
 - **Unified Pipeline Architecture (`app/ml/unified_pipeline.py`):**
   - Unifies all 7 trained neural model pipelines (M-01 through M-07) behind a single production inferencer.
   - Zero model retraining, zero modification to existing trained checkpoints.
-  - Transparent model availability tracking for all 7 models.
+  - Transparent model availability tracking and physical checkpoint existence inspection (`get_checkpoint_status()`).
+  - Supports environment variable overrides for all weights (`PHISHVISION_M01_WEIGHTS` through `PHISHVISION_M07_CHECKPOINT`).
+- **Scanner-to-ML Adapter (`app/scanner/adapter.py`):**
+  - Bridges Playwright scanner runtime data structures (`ScanResult`, `RedirectHop`, `FormInfo`) with `UnifiedPhishingPipeline`.
+  - Chronologically extracts redirect hostnames for M-07 Bi-LSTM sequential encoding.
+  - Formats DOM forms with password field and external submission indicators.
+  - Gracefully handles blocked SSRF scans (`ScanStatus.BLOCKED_SSRF`), timeouts, and headless failures without uncaught exceptions.
+- **FastAPI REST API (`app/main.py`, `app/api/v1/`):**
+  - Production-ready implementation of endpoints specified in `API_CONTRACTS.md`:
+    - `POST /api/v1/scan`: Fast and dynamic scanning with RFC 7807 problem details for scheme errors and Anti-SSRF blocks.
+    - `GET /api/v1/scan/{scan_id}`: Polls scan lifecycle status (`IN_PROGRESS`, `COMPLETED`, `FAILED`, `BLOCKED_SSRF`).
+    - `GET /api/v1/scan/{scan_id}/report`: Returns full sanitized explainable reports without internal path exposure.
+    - `GET /api/v1/scan/{scan_id}/screenshot`: Streams captured PNG screenshots.
+    - `GET /api/v1/brands`: Returns list of 18 protected reference brands and authorized domains.
+    - `GET /api/v1/health`: Surfaces system health, device, and transparent checkpoint status for all 7 models.
+    - `POST /api/v1/analyze/url`: Fast synchronous lexical intelligence.
+    - `POST /api/v1/analyze/brand-similarity`: Fast image upload brand matching.
+  - Non-blocking execution using `BackgroundTasks` and `asyncio.to_thread` guarantees API event loop responsiveness.
+- **External Checkpoint Deployment (`scripts/download_checkpoints.py`):**
+  - Structured CLI tool verifying physical existence, file sizes, and paths for all 9 model weights and auxiliary preprocessors.
+  - Automated verification (`--verify`) and remote download (`--download`) prevents committing large binaries to git.
+- **Risk Fusion False Positive Audit & Resolution:**
+  - Audited and fixed false positive triggers:
+    1. `cloudsupport-knowledge.org` (Synthetic 404/empty page): Single detector low-confidence edge hallucinations no longer bypass non-harvesting capping. Correctly classified as `SUSPICIOUS` (risk 0.40, previously falsely PHISHING 0.8582).
+    2. `t.me` (Real-world legitimate Telegram preview): Presence of lone input fields/buttons without a password field or login card is no longer treated as credential harvesting. Correctly classified as `LEGITIMATE` (risk 0.30, previously falsely PHISHING 0.8500).
 - **Spatial Consensus Engine (`app/ml/vision/spatial_consensus.py`):**
   - Fuses spatial detections across M-04 (YOLOv8n), M-05 (Faster R-CNN), and M-06 (YOLOv8-Seg) via IoU clustering ($\text{IoU} \ge 0.45$).
-  - Prevents duplicate UI element counting.
+  - Filters oversized background boxes (> 45% image area).
   - Preserves exact polygon segmentation masks and pixel area from YOLO-Seg.
   - Crops logo candidates with ~10% padding from deduplicated consensus logo clusters for M-03 Siamese verification.
 - **Calibrated Multi-Evidence Risk Fusion:**
   - Normalizes raw sigmoid scores for cost-sensitive models (M-01 threshold 0.05, M-07 threshold 0.01) onto an aligned $[0.0, 1.0]$ risk scale.
   - Cross-verifies DOM form submissions and password inputs with visual detections.
-  - Preserves critical brand impersonation override ($risk \ge 0.95$), official brand whitelist pass ($risk \le 0.05$), and 404/empty page risk capping ($\le 0.40$).
+  - Preserves critical brand impersonation override ($risk \ge 0.95$), official brand whitelist pass ($risk \le 0.05$), and non-harvesting page risk capping ($\le 0.40$).
   - Preserves `UNKNOWN / INSUFFICIENT EVIDENCE` fallbacks when visual capture is absent and URL confidence is ambiguous.
-- **Automated Verification Suite (`tests/test_seven_model_integration.py`):**
-  - 14/14 tests passing covering all 7 models, spatial consensus deduplication, missing checkpoints, corrupt images, missing reference galleries, anti-SSRF protections, and fallback states.
-  - Full regression suite passing: 74/74 tests across detection, segmentation, sequence, and multimodal modules.
-- **Evaluation Reports:**
-  - Emitted benchmark evaluation to [`data/reports/seven_model_pipeline_evaluation.json`](data/reports/seven_model_pipeline_evaluation.json) and [`data/reports/SEVEN_MODEL_INTEGRATION_REPORT.md`](data/reports/SEVEN_MODEL_INTEGRATION_REPORT.md).
+- **Automated Verification Suite:**
+  - [`tests/test_seven_model_integration.py`](tests/test_seven_model_integration.py): **16/16 PASSED (100%)**
+  - [`tests/test_scanner_adapter.py`](tests/test_scanner_adapter.py): **7/7 PASSED (100%)**
+  - [`tests/test_api.py`](tests/test_api.py): **8/8 PASSED (100%)**
+  - Full suite passing: **89/89 tests passing across all active modules**.
 
 - **M-07 Architecture (`app/ml/sequence/lstm_model.py`):**
   - Bidirectional LSTM with self-attentive temporal pooling (`AttentionPooling`).

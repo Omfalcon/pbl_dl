@@ -20,6 +20,7 @@ Features:
 from __future__ import annotations
 
 import logging
+import os
 import re
 import urllib.parse
 from pathlib import Path
@@ -87,6 +88,31 @@ class UnifiedPhishingPipeline:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
             self.device = torch.device(device)
+
+        # Environment variable overrides
+        m01_weights_path = os.getenv("PHISHVISION_M01_WEIGHTS", str(m01_weights_path))
+        m01_preprocessor_path = os.getenv("PHISHVISION_M01_PREPROCESSOR", str(m01_preprocessor_path))
+        m02_checkpoint_path = os.getenv("PHISHVISION_M02_CHECKPOINT", str(m02_checkpoint_path))
+        m03_checkpoint_path = os.getenv("PHISHVISION_M03_CHECKPOINT", str(m03_checkpoint_path))
+        m04_checkpoint_path = os.getenv("PHISHVISION_M04_CHECKPOINT", str(m04_checkpoint_path))
+        m05_checkpoint_path = os.getenv("PHISHVISION_M05_CHECKPOINT", str(m05_checkpoint_path))
+        m06_checkpoint_path = os.getenv("PHISHVISION_M06_CHECKPOINT", str(m06_checkpoint_path))
+        m07_checkpoint_path = os.getenv("PHISHVISION_M07_CHECKPOINT", str(m07_checkpoint_path))
+        m07_preprocessor_path = os.getenv("PHISHVISION_M07_PREPROCESSOR", str(m07_preprocessor_path))
+        brand_gallery_dir = os.getenv("PHISHVISION_BRAND_GALLERY", str(brand_gallery_dir))
+
+        self.checkpoint_paths = {
+            "m01_weights": m01_weights_path,
+            "m01_preprocessor": m01_preprocessor_path,
+            "m02_checkpoint": m02_checkpoint_path,
+            "m03_checkpoint": m03_checkpoint_path,
+            "m04_checkpoint": m04_checkpoint_path,
+            "m05_checkpoint": m05_checkpoint_path,
+            "m06_checkpoint": m06_checkpoint_path,
+            "m07_checkpoint": m07_checkpoint_path,
+            "m07_preprocessor": m07_preprocessor_path,
+            "brand_gallery": brand_gallery_dir,
+        }
 
         # ---------------------------------------------------------------------
         # 1. Initialize M-01 URL Lexical MLP
@@ -209,6 +235,60 @@ class UnifiedPhishingPipeline:
 
         # Spatial Consensus Engine for Non-Duplicative Visual Detection
         self.spatial_engine = SpatialConsensusEngine(iou_threshold=0.45)
+
+    def get_checkpoint_status(self) -> dict[str, dict[str, Any]]:
+        """Return physical existence and operational status for all seven models.
+
+        Ensures full visibility into checkpoint deployment and prevents claiming
+        models are operational when weights are missing.
+        """
+        models_info = {
+            "M-01_lexical_mlp": {
+                "name": "M-01 URL Lexical MLP",
+                "weights_path": str(self.checkpoint_paths["m01_weights"]),
+                "weights_exist": Path(self.checkpoint_paths["m01_weights"]).exists(),
+                "auxiliary_exist": Path(self.checkpoint_paths["m01_preprocessor"]).exists(),
+                "status": "LOADED" if self.m01_available else ("MISSING_WEIGHTS" if not Path(self.checkpoint_paths["m01_weights"]).exists() else "LOAD_FAILED"),
+            },
+            "M-02_resnet18": {
+                "name": "M-02 ResNet-18 Global Classifier",
+                "weights_path": str(self.checkpoint_paths["m02_checkpoint"]),
+                "weights_exist": Path(self.checkpoint_paths["m02_checkpoint"]).exists(),
+                "status": "LOADED" if self.m02_available else ("MISSING_WEIGHTS" if not Path(self.checkpoint_paths["m02_checkpoint"]).exists() else "LOAD_FAILED"),
+            },
+            "M-03_siamese": {
+                "name": "M-03 Siamese CNN Brand Matcher",
+                "weights_path": str(self.checkpoint_paths["m03_checkpoint"]),
+                "weights_exist": Path(self.checkpoint_paths["m03_checkpoint"]).exists(),
+                "status": "LOADED" if self.m03_available else ("MISSING_WEIGHTS" if not Path(self.checkpoint_paths["m03_checkpoint"]).exists() else "LOAD_FAILED"),
+            },
+            "M-04_yolov8n": {
+                "name": "M-04 YOLOv8n UI Detector",
+                "weights_path": str(self.checkpoint_paths["m04_checkpoint"]),
+                "weights_exist": Path(self.checkpoint_paths["m04_checkpoint"]).exists(),
+                "status": "LOADED" if self.m04_available else ("MISSING_WEIGHTS" if not Path(self.checkpoint_paths["m04_checkpoint"]).exists() else "LOAD_FAILED"),
+            },
+            "M-05_faster_rcnn": {
+                "name": "M-05 Faster R-CNN (ResNet-50-FPN)",
+                "weights_path": str(self.checkpoint_paths["m05_checkpoint"]),
+                "weights_exist": Path(self.checkpoint_paths["m05_checkpoint"]).exists(),
+                "status": "LOADED" if self.m05_available else ("MISSING_WEIGHTS" if not Path(self.checkpoint_paths["m05_checkpoint"]).exists() else "LOAD_FAILED"),
+            },
+            "M-06_yolov8_seg": {
+                "name": "M-06 YOLOv8-Seg Instance Segmenter",
+                "weights_path": str(self.checkpoint_paths["m06_checkpoint"]),
+                "weights_exist": Path(self.checkpoint_paths["m06_checkpoint"]).exists(),
+                "status": "LOADED" if self.m06_available else ("MISSING_WEIGHTS" if not Path(self.checkpoint_paths["m06_checkpoint"]).exists() else "LOAD_FAILED"),
+            },
+            "M-07_lstm": {
+                "name": "M-07 URL Sequence Bi-LSTM",
+                "weights_path": str(self.checkpoint_paths["m07_checkpoint"]),
+                "weights_exist": Path(self.checkpoint_paths["m07_checkpoint"]).exists(),
+                "auxiliary_exist": Path(self.checkpoint_paths["m07_preprocessor"]).exists(),
+                "status": "LOADED" if self.m07_available else ("MISSING_WEIGHTS" if not Path(self.checkpoint_paths["m07_checkpoint"]).exists() else "LOAD_FAILED"),
+            },
+        }
+        return models_info
 
     def analyze(
         self,
@@ -742,37 +822,65 @@ class UnifiedPhishingPipeline:
                 ),
             }
 
+        # Check whether an active credential or payment harvesting surface is present
+        has_active_harvesting = (
+            has_inputs
+            or has_payment
+            or is_impersonation
+        )
+
         # ---------------------------------------------------------------------
-        # Rule 4: Empty / Error / 404 Pages Handling (0 UI Elements & no DOM inputs)
+        # Rule 4: Non-Harvesting / Empty / Error / Clean Pages
+        # When page contains NO active credential fields, NO password field,
+        # NO payment elements, and NO brand impersonation:
         # ---------------------------------------------------------------------
-        if total_ui_elements == 0 and not dom_evidence.get("has_dom_password_field", False):
-            # Check if URL was flagged suspicious
-            is_suspicious_url = (composite_url_risk is not None and composite_url_risk >= 0.50) or (
-                p_lex is not None and p_lex >= 0.50
-            ) or (p_lstm is not None and p_lstm >= self.m07_threshold)
+        if not has_active_harvesting:
+            # If ResNet-18 confirms legitimate visual layout (e.g. t.me preview, blogs)
+            if p_res is not None and p_res <= 0.40:
+                url_term = composite_url_risk if composite_url_risk is not None else (p_lex if p_lex is not None else 0.50)
+                risk = round(min(0.30, 0.30 * url_term + 0.70 * p_res), 4)
+                return {
+                    "threat_category": "LEGITIMATE",
+                    "risk_score": risk,
+                    "explanation": (
+                        f"Clean visual page on '{target_domain}' with no credential harvesting elements, "
+                        "no brand impersonation, and legitimate visual layout profile."
+                    ),
+                }
+
+            # If page is empty / error / minimal, or has non-harvesting elements:
+            # Even if URL or layout triggered heuristic suspicion, lack of credential theft or brand spoofing
+            # caps the threat at SUSPICIOUS (or LEGITIMATE if URL is clean).
+            is_suspicious_url = (
+                (composite_url_risk is not None and composite_url_risk >= 0.50)
+                or (p_lex is not None and p_lex >= self.m01_threshold)
+                or (p_lstm is not None and p_lstm >= self.m07_threshold)
+                or (p_res is not None and p_res >= 0.50)
+            )
 
             if is_suspicious_url:
                 return {
                     "threat_category": "SUSPICIOUS",
                     "risk_score": 0.40,
                     "explanation": (
-                        "Anomalous URL pattern detected, but visual screenshot contains no credential fields, "
-                        "forms, or brand logos (empty or error page). Inactive visual state caps risk at SUSPICIOUS."
+                        f"Suspicious URL or visual layout indicators detected on '{target_domain}', but page contains "
+                        "no active credential fields, login form, payment elements, or brand logos (empty or error page). "
+                        "Absence of harvesting surface caps risk at SUSPICIOUS."
                     ),
                 }
             return {
                 "threat_category": "LEGITIMATE",
                 "risk_score": min(0.20, composite_url_risk if composite_url_risk is not None else 0.10),
                 "explanation": (
-                    "Empty or minimal error page with no credential harvesting elements or brand logos, "
-                    "and low URL risk."
+                    f"Non-harvesting page on '{target_domain}' with no credential fields or brand logos, "
+                    "and clean URL indicators."
                 ),
             }
 
         # ---------------------------------------------------------------------
-        # Rule 5: Credential / Payment Harvesting Surface Present
+        # Rule 5: Active Credential / Payment Harvesting Surface Present
         # ---------------------------------------------------------------------
-        if has_inputs or has_payment or (has_login and has_submit):
+        if has_inputs or has_payment:
             is_suspicious_host = (
                 url_evidence.get("is_url_suspicious", False)
                 or (p_lex is not None and p_lex >= self.m01_threshold)
@@ -808,22 +916,7 @@ class UnifiedPhishingPipeline:
                 }
 
         # ---------------------------------------------------------------------
-        # Rule 6: Neutral Visual Pages without Harvesting Elements (e.g. t.me)
-        # ---------------------------------------------------------------------
-        if p_res is not None and p_res <= 0.40:
-            url_term = composite_url_risk if composite_url_risk is not None else (p_lex if p_lex is not None else 0.50)
-            risk = round(min(0.30, 0.30 * url_term + 0.70 * p_res), 4)
-            return {
-                "threat_category": "LEGITIMATE",
-                "risk_score": risk,
-                "explanation": (
-                    f"Clean visual page on '{target_domain}' with no credential harvesting elements, "
-                    "no brand impersonation, and legitimate visual layout profile."
-                ),
-            }
-
-        # ---------------------------------------------------------------------
-        # Rule 7: Multi-Evidence Fallback
+        # Rule 6: Multi-Evidence Fallback
         # ---------------------------------------------------------------------
         weights = []
         values = []

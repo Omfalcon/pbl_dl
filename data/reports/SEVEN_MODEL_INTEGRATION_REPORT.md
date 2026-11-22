@@ -71,7 +71,34 @@ Generated and exported to [`data/reports/seven_model_pipeline_evaluation.json`](
 | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
 | **Synthetic Standard Login (TitanVault)** | `titanvault-portal.net` | **PHISHING** | 0.9735 | 5 / 5 / 3 (13 total) | **10** | Neutral (S=0.70) |
 | **Synthetic Payment Checkout (OmniPay)** | `omnipays-gateway.com` | **PHISHING** | 0.9720 | 6 / 6 / 4 (16 total) | **13** | Neutral (S=0.68) |
-| **Synthetic 404 Empty Page** | `cloudsupport-knowledge.org` | **PHISHING** | 0.8582 | 0 / 0 / 3 (3 total) | 3 | Neutral (S=0.00) |
+| **Synthetic 404 Empty Page** | `cloudsupport-knowledge.org` | **SUSPICIOUS** | 0.4000 | 0 / 0 / 2 (2 total) | **2** | Neutral (S=0.00) |
 | **Real-World Phishing Screenshot** | `dweb.link` | **PHISHING** | 0.8500 | 4 / 6 / 4 (14 total) | **14** | Neutral (S=0.76) |
-| **Real-World Legitimate Screenshot** | `t.me` | **PHISHING** | 0.8500 | 1 / 4 / 5 (10 total) | **10** | Neutral (S=0.69) |
+| **Real-World Legitimate Screenshot** | `t.me` | **LEGITIMATE** | 0.3000 | 1 / 4 / 5 (10 total) | **9** | Neutral (S=0.69) |
 | **Missing Screenshot Fallback** | `medium.com` | **UNKNOWN / INSUFFICIENT EVIDENCE** | 0.5000 | 0 / 0 / 0 (0 total) | **0** | Neutral (S=0.00) |
+
+---
+
+## 5. Phase 8 Backend Completion
+
+### 5.1 Scanner-to-ML Adapter (`app/scanner/adapter.py`)
+- Standardizes ingestion of `ScanResult`, `RedirectHop`, and `FormInfo` models into exact types for `UnifiedPhishingPipeline.analyze()`.
+- Extracts chronological redirect hostnames for M-07 sequence vocabulary encoding.
+- Maps HTML input structures into DOM dictionaries with password field and external submission indicators.
+- Seamlessly handles `ScanStatus.BLOCKED_SSRF`, `ScanStatus.TIMED_OUT`, and `ScanStatus.FAILED` without uncaught runtime errors.
+
+### 5.2 Production FastAPI REST API (`app/main.py`, `app/api/v1/`)
+- Fully implements REST contracts defined in `API_CONTRACTS.md`:
+  - `POST /api/v1/scan`: Fast and dynamic scanning with RFC 7807 problem details for scheme errors and Anti-SSRF blocks.
+  - `GET /api/v1/scan/{scan_id}`: Polls scan lifecycle (`IN_PROGRESS`, `COMPLETED`, `FAILED`, `BLOCKED_SSRF`).
+  - `GET /api/v1/scan/{scan_id}/report`: Returns full sanitized explainable reports without internal path exposure.
+  - `GET /api/v1/scan/{scan_id}/screenshot`: Streams captured PNG screenshot.
+  - `GET /api/v1/brands`: Returns list of 18 protected reference brands and authorized domains.
+  - `GET /api/v1/health`: Surfaces system health, device, and transparent checkpoint status for all 7 models.
+  - `POST /api/v1/analyze/url`: Fast synchronous lexical intelligence.
+  - `POST /api/v1/analyze/brand-similarity`: Fast image upload brand matching.
+- Asynchronous task management ensures dynamic browser sessions never block the API event loop.
+
+### 5.3 External Checkpoint Deployment (`scripts/download_checkpoints.py`)
+- Dedicated manager verifying physical existence of all 9 model weights and auxiliary preprocessors on disk.
+- Environment variable overrides supported (`PHISHVISION_M01_WEIGHTS` through `PHISHVISION_M07_CHECKPOINT`).
+- Automated verification (`--verify`) and remote download (`--download`) commands prevent committing large binaries to git.

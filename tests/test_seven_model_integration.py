@@ -457,3 +457,54 @@ class TestSecurityAndRobustness:
             assert res["evidence"]["ui_elements"]["total_fused_elements"] == 0
         finally:
             Path(corrupt_path).unlink(missing_ok=True)
+
+
+# =============================================================================
+# 6. False Positive Regression Tests
+# =============================================================================
+
+class TestFalsePositiveRegressions:
+    """Explicit regression tests preventing false positives on empty pages and clean layouts."""
+
+    def test_synthetic_empty_404_page_regression(
+        self, unified_pipeline: UnifiedPhishingPipeline
+    ) -> None:
+        """Synthetic empty/404 page (cloudsupport-knowledge.org) must cap at SUSPICIOUS, never PHISHING."""
+        empty_img = Path("data/synthetic_yolo/images/test/synth_test_0031.png")
+        if not empty_img.exists():
+            pytest.skip("Synthetic test image synth_test_0031.png not available")
+
+        res = unified_pipeline.analyze(
+            url="https://help-docs.cloudsupport-knowledge.org/articles/error-404",
+            screenshot=empty_img,
+            domain="cloudsupport-knowledge.org",
+            render_preview=False,
+        )
+
+        assert res["threat_category"] == "SUSPICIOUS"
+        assert res["risk_score"] == 0.40
+        assert "no active credential fields" in res["explanation"] or "Absence of harvesting surface" in res["explanation"]
+
+    def test_legitimate_clean_layout_regression(
+        self, unified_pipeline: UnifiedPhishingPipeline
+    ) -> None:
+        """Legitimate page with clean layout and no password field (t.me) must be LEGITIMATE, never PHISHING."""
+        shot_path = Path("data/raw/external_dataset/DatasetV1/0817_t.me/screenshot.png")
+        if not shot_path.exists():
+            candidates = list(Path("data").glob("**/0817_t.me/screenshot.png"))
+            if candidates:
+                shot_path = candidates[0]
+
+        if not shot_path.exists():
+            pytest.skip("Reference screenshot 0817_t.me/screenshot.png not found")
+
+        res = unified_pipeline.analyze(
+            url="https://t.me/s/telegram",
+            screenshot=shot_path,
+            domain="t.me",
+            render_preview=False,
+        )
+
+        assert res["threat_category"] == "LEGITIMATE"
+        assert res["risk_score"] <= 0.35
+        assert "no credential harvesting elements" in res["explanation"] or "legitimate visual layout profile" in res["explanation"]

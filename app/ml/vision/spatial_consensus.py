@@ -146,9 +146,20 @@ class SpatialConsensusEngine:
                     "mask_area": inst.get("mask_area_pixels"),
                 })
 
-        # Group by class ID to enforce class-specific spatial clustering
+        # Group by class ID to enforce class-specific spatial clustering, filtering oversized artifacts
         by_class: dict[int, list[dict[str, Any]]] = {}
         for c in raw_candidates:
+            # Filter oversized background hallucinations (boxes covering > 45% of image area)
+            box = c["bbox_pixel"]
+            bw = max(0, box[2] - box[0])
+            bh = max(0, box[3] - box[1])
+            box_area = bw * bh
+            if image_size and image_size[0] > 0 and image_size[1] > 0:
+                if box_area > 0.45 * (image_size[0] * image_size[1]):
+                    continue
+            elif bw > 1000 and bh > 400:
+                continue
+
             by_class.setdefault(c["class_id"], []).append(c)
 
         fused_elements: list[FusedUIElement] = []
@@ -217,7 +228,8 @@ class SpatialConsensusEngine:
         has_submit_btn = class_counts.get("submit_button", 0) > 0
         has_payment_el = class_counts.get("payment_element", 0) > 0
 
-        has_credential_inputs = has_pass_field or (has_user_field and has_submit_btn)
+        # Credential inputs strictly require a password field (or DOM password field)
+        has_credential_inputs = has_pass_field
 
         return {
             "total_fused_elements": len(fused_elements),
