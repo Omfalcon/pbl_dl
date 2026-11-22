@@ -39,7 +39,7 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
   - Hardened with input length validation, shape checking, gradient finiteness checks, state consistency, and scheduler rate synchronization.
   - Verified updates against hand-calculated analytical values and proven convergence on regression & classification.
   - Optimizer convergence benchmark exported to `data/reports/optimizer_benchmark.json`.
-  - **Full test suite: 165 unit tests passing (1 deselected) in ~4.52s**. Zero regressions.
+  - **Full test suite: 167 unit tests passing (1 deselected) in ~6.39s**. Zero regressions.
 
 ---
 
@@ -144,4 +144,4 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
 
 - **Date:** 2026-11-22
 - **Command:** `pytest -v -m "not integration"`
-- **Result:** `165 passed, 1 deselected in 4.52s` (Exit Code 0). All anti-SSRF, scanner models, dataset processing, neural network math foundations, parameter finiteness checks, and custom optimizer edge cases verified.
+- **Result:** `167 passed, 1 deselected in 6.39s` (Exit Code 0). All anti-SSRF, scanner models, dataset processing, neural network math foundations, parameter finiteness/dtype/writability checks, and custom optimizer edge cases verified.

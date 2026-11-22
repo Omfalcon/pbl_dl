@@ -178,10 +178,11 @@ class Optimizer(ABC):
         return self.lr
 
     def validate_inputs(self, params: list[np.ndarray], grads: list[np.ndarray]) -> None:
-        """Validate parameter and gradient list lengths, shapes, and finite values.
+        """Validate parameter and gradient list lengths, shapes, dtypes, and finite values.
 
         Prevents silent parameter skips through zip truncation and ensures
-        all inputs are strictly finite before any mutation occurs.
+        all inputs are writable floating-point arrays and strictly finite before
+        any mutation occurs.
         """
         if len(params) != len(grads):
             raise ValueError(
@@ -190,6 +191,14 @@ class Optimizer(ABC):
         for idx, (p, g) in enumerate(zip(params, grads)):
             if not isinstance(p, np.ndarray) or not isinstance(g, np.ndarray):
                 raise TypeError(f"Parameters and gradients must be numpy arrays; got {type(p)} and {type(g)} at index {idx}")
+            if not np.issubdtype(p.dtype, np.floating):
+                raise TypeError(
+                    f"Parameter array at index {idx} must have floating-point dtype; got {p.dtype}"
+                )
+            if not p.flags.writeable:
+                raise ValueError(
+                    f"Parameter array at index {idx} is read-only and cannot be updated in-place"
+                )
             if p.shape != g.shape:
                 raise ValueError(
                     f"Shape mismatch at index {idx}: parameter shape {p.shape} != gradient shape {g.shape}"

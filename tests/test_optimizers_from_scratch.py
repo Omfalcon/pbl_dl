@@ -273,6 +273,37 @@ class TestOptimizerHardeningAndEdgeCases:
             with pytest.raises(ValueError, match="Non-finite parameter"):
                 opt.step([np.array([-np.inf, 2.0])], [np.array([0.1, 0.2])])
 
+    def test_non_floating_parameters_rejected(self):
+        # Reject integer or non-floating-point parameter arrays across all 4 optimizers
+        for opt_cls in [SGD, SGDMomentum, RMSProp, Adam]:
+            opt = opt_cls()
+            int_param = np.array([1, 2], dtype=np.int64)
+            grad = np.array([0.1, 0.2], dtype=np.float64)
+
+            with pytest.raises(TypeError, match="must have floating-point dtype"):
+                opt.step([int_param], [grad])
+
+            assert opt.t == 0
+            assert np.array_equal(int_param, [1, 2])
+
+            # Also check bool array rejection
+            bool_param = np.array([True, False])
+            with pytest.raises(TypeError, match="must have floating-point dtype"):
+                opt.step([bool_param], [grad])
+
+    def test_read_only_parameters_rejected(self):
+        # Reject read-only parameter arrays across all 4 optimizers
+        for opt_cls in [SGD, SGDMomentum, RMSProp, Adam]:
+            opt = opt_cls()
+            ro_param = np.array([1.0, 2.0], dtype=np.float64)
+            ro_param.flags.writeable = False
+            grad = np.array([0.1, 0.2], dtype=np.float64)
+
+            with pytest.raises(ValueError, match="is read-only and cannot be updated in-place"):
+                opt.step([ro_param], [grad])
+
+            assert opt.t == 0
+
     def test_invalid_inputs_do_not_partially_mutate_state_or_params(self):
         p1 = np.array([10.0, 20.0], dtype=np.float64)
         p1_copy = p1.copy()
@@ -297,6 +328,23 @@ class TestOptimizerHardeningAndEdgeCases:
             opt.step([p1, p2_wrong_shape], [g1, g2_wrong_shape])
 
         assert np.array_equal(p1, p1_copy), "Parameter p1 was mutated on shape mismatch"
+        assert opt.t == 0
+
+        # Integer parameter at index 1 must also not mutate parameter 1
+        p2_int = np.array([30, 40], dtype=np.int64)
+        with pytest.raises(TypeError, match="must have floating-point dtype"):
+            opt.step([p1, p2_int], [g1, g2])
+
+        assert np.array_equal(p1, p1_copy), "Parameter p1 was mutated on int dtype rejection"
+        assert opt.t == 0
+
+        # Read-only parameter at index 1 must also not mutate parameter 1
+        p2_ro = np.array([30.0, 40.0], dtype=np.float64)
+        p2_ro.flags.writeable = False
+        with pytest.raises(ValueError, match="is read-only"):
+            opt.step([p1, p2_ro], [g1, g2])
+
+        assert np.array_equal(p1, p1_copy), "Parameter p1 was mutated on read-only rejection"
         assert opt.t == 0
 
     def test_optimizer_state_consistency_on_param_structure_change(self):
