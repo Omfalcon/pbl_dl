@@ -50,7 +50,7 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
   - Validation/test discrepancy resolved via domain-cluster analysis (accounting for 65.9% Google Docs/Forms concentration in validation) and best-validation-checkpoint restoration at epoch 17 (calibrated $\tau = 0.050$).
   - 3-Layer Lexical MLP (M-01) trained from scratch with Adam and CosineAnnealingLR (`models/lexical/model_weights.npz`).
   - Holdout test metrics on 4,257 unseen records across 908 unseen domains: **ROC-AUC: 0.9773, PR-AUC: 0.9995, Macro F1: 0.8239, Phishing F1: 0.9932, Legit F1: 0.6545, Accuracy: 98.66%**. Full report exported to `data/reports/lexical_mlp_evaluation.json`.
-  - **Full test suite: 209 unit tests passing (1 deselected) in ~4.76s**. Zero regressions.
+  - **Full test suite: 210 unit tests passing (1 deselected) in ~4.76s**. Zero regressions.
 
 ---
 

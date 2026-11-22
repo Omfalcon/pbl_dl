@@ -96,35 +96,16 @@ CONFUSABLES_MAP: dict[str, str] = {
     "\uff45": "e",
     "\uff4f": "o",
     "\uff50": "p",
-    # Latin accented confusables
-    "\u00e1": "a",  # a with acute
-    "\u00e0": "a",  # a with grave
-    "\u00e2": "a",  # a with circumflex
-    "\u00e4": "a",  # a with diaeresis
-    "\u00e3": "a",  # a with tilde
-    "\u00e5": "a",  # a with ring
-    "\u00e9": "e",  # e with acute
-    "\u00e8": "e",  # e with grave
-    "\u00ea": "e",  # e with circumflex
-    "\u00eb": "e",  # e with diaeresis
-    "\u00ed": "i",  # i with acute
-    "\u00ec": "i",  # i with grave
-    "\u00ee": "i",  # i with circumflex
-    "\u00ef": "i",  # i with diaeresis
-    "\u0131": "i",  # dotless i
-    "\u00f3": "o",  # o with acute
-    "\u00f2": "o",  # o with grave
-    "\u00f4": "o",  # o with circumflex
-    "\u00f6": "o",  # o with diaeresis
-    "\u00f5": "o",  # o with tilde
-    "\u00f8": "o",  # o with stroke
-    "\u00fa": "u",  # u with acute
-    "\u00f9": "u",  # u with grave
-    "\u00fb": "u",  # u with circumflex
-    "\u00fc": "u",  # u with diaeresis
-    "\u00e7": "c",  # c with cedilla
-    "\u00f1": "n",  # n with tilde
 }
+
+
+def strip_diacritics(text: str) -> str:
+    """Normalize Unicode text by stripping combining diacritical marks (e.g. café -> cafe).
+    
+    Separates standard Latin diacritic normalization from cross-script confusable detection.
+    """
+    nfkd = unicodedata.normalize("NFKD", text)
+    return "".join(c for c in nfkd if not unicodedata.combining(c))
 
 
 @dataclass(frozen=True)
@@ -138,6 +119,11 @@ class HomoglyphEvidence:
     detected_scripts: list[str]
     has_mixed_scripts: bool
     confusable_character_count: int
+    confusable_characters: list[dict[str, Any]]
+    canonical_form: str
+    diacritic_normalized_form: str
+    is_suspicious_homoglyph: bool
+    evidence_description: str
     confusable_characters: list[dict[str, Any]]
     canonical_form: str
     is_suspicious_homoglyph: bool
@@ -206,6 +192,7 @@ class HomoglyphDetector:
                 confusable_character_count=0,
                 confusable_characters=[],
                 canonical_form="",
+                diacritic_normalized_form="",
                 is_suspicious_homoglyph=False,
                 evidence_description="Empty hostname provided.",
             )
@@ -249,13 +236,14 @@ class HomoglyphDetector:
         for char in unicode_host:
             canonical_chars.append(CONFUSABLES_MAP.get(char, char))
         canonical_form = "".join(canonical_chars)
+        diacritic_norm = strip_diacritics(unicode_host)
 
         sorted_scripts = sorted(list(all_scripts))
 
         # Determine suspicion:
-        # 1. Mixed script in a label: HIGHLY SUSPICIOUS
-        # 2. Confusables present in a domain under a Latin/ASCII TLD (e.g., .com, .net, .co.uk, .co.in)
-        # 3. Legitimate single-script IDN (e.g. pure Cyrillic or pure Greek label under IDN TLD): NOT suspicious
+        # 1. Mixed script in a label: HIGHLY SUSPICIOUS (e.g., Latin mixed with Cyrillic or Greek)
+        # 2. Whole-script confusable spoof under ASCII TLD (all characters in non-Latin label map to Latin ASCII)
+        # 3. Legitimate single-script IDN (e.g., pure Cyrillic президент.рф or pure Latin with diacritics café.com): NOT suspicious
         is_suspicious = False
         reasons: list[str] = []
 
@@ -269,10 +257,19 @@ class HomoglyphDetector:
             # Check if domain uses a standard ASCII TLD (like .com, .org) with confusable characters
             tld = info.suffix.lower()
             ascii_tlds = {"com", "net", "org", "co.uk", "co.in", "io", "xyz", "info", "biz"}
-            if tld in ascii_tlds and len(confusables) > 0:
+
+            # Check if any label is a whole-script confusable spoof (all non-Latin characters map to ASCII)
+            is_whole_script_spoof = False
+            for label in labels:
+                if label != tld and any(c in CONFUSABLES_MAP for c in label):
+                    if all((c in CONFUSABLES_MAP) or (ord(c) <= 127 and (c.isalnum() or c in "-_")) for c in label):
+                        is_whole_script_spoof = True
+                        break
+
+            if tld in ascii_tlds and is_whole_script_spoof:
                 is_suspicious = True
                 reasons.append(
-                    f"Confusable characters ({len(confusables)}) present in domain registered under standard ASCII TLD '.{tld}'."
+                    f"Whole-script confusable spoof detected: non-Latin label maps to Latin ASCII under standard TLD '.{tld}'."
                 )
             else:
                 reasons.append(
@@ -297,6 +294,7 @@ class HomoglyphDetector:
             confusable_character_count=len(confusables),
             confusable_characters=confusables,
             canonical_form=canonical_form,
+            diacritic_normalized_form=diacritic_norm,
             is_suspicious_homoglyph=is_suspicious,
             evidence_description=description,
         )

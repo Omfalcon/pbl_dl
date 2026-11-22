@@ -88,7 +88,7 @@ The hermetic test suite runs offline without requiring external network connecti
 ```bash
 pytest -v -m "not integration"
 ```
-*(All 209 unit tests pass in 4.76s, 1 deselected).*
+*(All 210 unit tests pass in 4.76s, 1 deselected).*
 
 To run the complete test suite including integration tests (requires local network loopback for scanner proxy tests):
 ```bash

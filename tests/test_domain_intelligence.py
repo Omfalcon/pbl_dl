@@ -127,11 +127,27 @@ class TestUnicodeHomoglyphs:
         legit_cyrillic = "http://президент.рф"
         ev = detector.analyze(legit_cyrillic)
 
+        assert not ev.is_suspicious_homoglyph
         assert not ev.has_mixed_scripts
         assert "LATIN" not in ev.detected_scripts
         assert "CYRILLIC" in ev.detected_scripts
-        # Must not be flagged as a mixed-script malicious homoglyph
-        assert not ev.has_mixed_scripts
+
+    def test_accented_latin_domains_not_flagged(self, detector: HomoglyphDetector):
+        # café.com (Latin with acute accent)
+        ev_cafe = detector.analyze("https://café.com")
+        assert not ev_cafe.is_suspicious_homoglyph
+        assert not ev_cafe.has_mixed_scripts
+        assert ev_cafe.confusable_character_count == 0
+        assert ev_cafe.detected_scripts == ["LATIN"]
+        assert ev_cafe.diacritic_normalized_form == "cafe.com"
+
+        # münchen.de (Latin with diaeresis)
+        ev_munchen = detector.analyze("https://münchen.de")
+        assert not ev_munchen.is_suspicious_homoglyph
+        assert not ev_munchen.has_mixed_scripts
+        assert ev_munchen.confusable_character_count == 0
+        assert ev_munchen.detected_scripts == ["LATIN"]
+        assert ev_munchen.diacritic_normalized_form == "munchen.de"
 
     def test_punycode_homoglyph_detection(self, detector: HomoglyphDetector):
         # xn--googl-3we.com -> googl + Cyrillic 'e' (\u0435)

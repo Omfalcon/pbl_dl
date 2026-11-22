@@ -52,5 +52,5 @@ All core test scenarios specified in `PHASE_ROADMAP.md` and phase requirements p
 - [x] **Official Brand Protection:** Official domains for protected brands are strictly recognized and never falsely flagged as typosquatting attacks.
 - [x] **Explainable Output:** Domain intelligence engine returns structured evidence with script breakdown, confusables, closest brand, distance, and human-readable explanation (ready for Phase 10 Risk Fusion).
 - [x] **Zero Data Leakage:** Preprocessor fitted on training split only; threshold calibrated on validation split only; final metrics measured on holdout test partition.
-- [x] **Comprehensive Testing:** **209 unit tests passing in 4.76s** (1 deselected). Zero regressions.
+- [x] **Comprehensive Testing:** **210 unit tests passing in 4.76s** (1 deselected). Zero regressions.
 - [x] **No Scope Bleed:** ResNet, YOLO, Siamese CNN, and Transformer models remain isolated for later phases.
