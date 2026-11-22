@@ -57,6 +57,7 @@ data/raw/
 data/processed/
 data/splits/
 data/cache/
+data/scans/
 *.parquet
 *.h5
 *.hdf5
