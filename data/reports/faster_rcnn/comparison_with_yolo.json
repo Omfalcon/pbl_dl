@@ -1,0 +1,27 @@
+{
+  "task": "Synthetic Website Element Object Detection",
+  "dataset_split": "test (120 images)",
+  "models": {
+    "M-04_YOLOv8n": {
+      "architecture": "YOLOv8n (Anchor-Free One-Stage)",
+      "checkpoint_size_mb": 6.2,
+      "mAP50": 0.995,
+      "mAP50_95": 0.9698842207793051,
+      "precision": 0.997297344750244,
+      "recall": 1.0,
+      "inference_latency_ms": 9.2,
+      "hardware_profile": "NVIDIA RTX 2050 (4GB VRAM)"
+    },
+    "M-05_FasterRCNN": {
+      "architecture": "Faster R-CNN ResNet-50-FPN (Two-Stage)",
+      "checkpoint_size_mb": 314.97,
+      "mAP50": 1.0,
+      "mAP50_95": 0.9806,
+      "precision": 0.9925,
+      "recall": 1.0,
+      "inference_latency_ms": 129.12,
+      "peak_vram_mb": 1065.08,
+      "hardware_profile": "NVIDIA RTX 2050 (4GB VRAM)"
+    }
+  }
+}

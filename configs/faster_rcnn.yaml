@@ -1,0 +1,45 @@
+# Faster R-CNN with ResNet-50-FPN Object Detection (M-05) Synthetic UI Experiment Configuration
+# PhishVision AI - Phase 7.6
+
+model:
+  model_id: "M-05"
+  architecture: "FasterRCNN_ResNet50_FPN"
+  weights: "COCO_V1"                  # Torchvision pretrained COCO weights
+  num_classes: 7                      # 6 UI detection classes + 1 background class
+  min_size: 512                       # Matched to 512x512 dataset resolution (saves VRAM on 4GB GPU)
+  max_size: 512                       # Maximum image dimension
+  trainable_backbone_layers: 3        # Fine-tune upper FPN/ResNet layers (freeze early low-level layers)
+  classes:
+    0: "__background__"
+    1: "brand_logo"
+    2: "login_form"
+    3: "username_field"
+    4: "password_field"
+    5: "submit_button"
+    6: "payment_element"
+
+data:
+  dataset_dir: "data/synthetic_yolo"
+  manifest_csv: "data/synthetic_yolo/manifest.csv"
+  imgsz: 512                          # 512x512 resolution (hardware-aware for 4GB VRAM)
+  workers: 2                          # Conservative dataloader workers for Windows
+
+training:
+  random_seed: 42
+  batch_size: 2                       # Conservative batch size for RTX 2050 4GB VRAM
+  epochs: 15
+  learning_rate: 0.002
+  momentum: 0.9
+  weight_decay: 0.0005
+  lr_step_size: 5
+  lr_gamma: 0.1
+  patience: 5                         # Early stopping patience
+  device: 0                           # GPU device ID (falls back to cpu if unavailable)
+  amp: true                           # Mixed precision (torch.cuda.amp) for low VRAM
+  save: true
+
+paths:
+  checkpoint_dir: "models/checkpoints/faster_rcnn_synthetic"
+  checkpoint_name: "best_faster_rcnn.pt"
+  report_dir: "data/reports/faster_rcnn"
+  yolo_report_dir: "data/reports/yolo"
