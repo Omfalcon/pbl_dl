@@ -1,17 +1,18 @@
-"""Unit tests for Anti-SSRF URL validation and DNS resolution."""
+"""Unit tests for Anti-SSRF URL validation, DNS resolution, and edge cases."""
 
+from unittest.mock import patch
 import pytest
+
 from app.scanner.anti_ssrf import (
     SSRFValidationError,
     is_ip_disallowed,
     validate_redirect_target,
     validate_url_and_resolve,
 )
-import ipaddress
 
 
 class TestAntiSSRFValidation:
-    """Test suite verifying strict Anti-SSRF boundaries and IP filtering."""
+    """Test suite verifying strict Anti-SSRF boundaries, IP filtering, and URL parser hardening."""
 
     @pytest.mark.parametrize(
         "url",
@@ -41,12 +42,52 @@ class TestAntiSSRFValidation:
             ("dict://127.0.0.1:11211/stat", "INVALID_SCHEME"),
             ("", "INVALID_URL_EMPTY"),
             ("   ", "INVALID_URL_EMPTY"),
+            ("http://", "MISSING_HOSTNAME"),
+            ("https://", "MISSING_HOSTNAME"),
         ],
     )
-    def test_invalid_scheme_rejection(self, url: str, expected_code: str):
+    def test_invalid_scheme_and_empty_rejection(self, url: str, expected_code: str):
         result = validate_url_and_resolve(url)
         assert result.is_valid is False
         assert result.error_code == expected_code
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://example.com:0/",
+            "http://example.com:65536/",
+            "http://example.com:99999/",
+            "http://example.com:-1/",
+            "http://example.com:port/",
+        ],
+    )
+    def test_out_of_range_and_invalid_ports(self, url: str):
+        result = validate_url_and_resolve(url)
+        assert result.is_valid is False
+        assert result.error_code in ("INVALID_PORT", "PORT_OUT_OF_RANGE", "PORT_NOT_PERMITTED")
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://foo@bar@example.com/",
+            "http://user:pass@evil@victim.com/",
+            "http://example.com/\x00evil",
+            "http://example.com/\r\nSet-Cookie:1",
+            "http://[::1/",
+            "http://::1]/",
+        ],
+    )
+    def test_malformed_authorities_and_control_chars(self, url: str):
+        result = validate_url_and_resolve(url)
+        assert result.is_valid is False
+        assert result.error_code in (
+            "MALFORMED_AUTHORITY",
+            "MALFORMED_URL",
+            "MALFORMED_IPV6_BRACKETS",
+            "INVALID_PORT",
+            "INVALID_HOSTNAME",
+            "URL_PARSE_ERROR",
+        )
 
     @pytest.mark.parametrize(
         "url",
@@ -107,6 +148,35 @@ class TestAntiSSRFValidation:
         assert result.error_code == "BLOCKED_IP_LITERAL"
 
     @pytest.mark.parametrize(
+        "url",
+        [
+            "http://[::ffff:127.0.0.1]/",
+            "http://[::ffff:192.168.1.1]/",
+            "http://[::ffff:10.0.0.1]/",
+            "http://[::ffff:169.254.169.254]/",
+        ],
+    )
+    def test_ipv4_mapped_ipv6_rejection(self, url: str):
+        result = validate_url_and_resolve(url)
+        assert result.is_valid is False
+        assert result.error_code == "BLOCKED_IP_LITERAL"
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://2130706433/",            # DWORD integer for 127.0.0.1
+            "http://0x7f000001/",            # Hex for 127.0.0.1
+            "http://0177.0.0.1/",            # Dotted octal for 127.0.0.1
+            "http://0x7f.0.0.1/",            # Mixed hex/octal for 127.0.0.1
+            "http://%31%32%37%2e%30%2e%30%2e%31/", # Percent-encoded 127.0.0.1
+        ],
+    )
+    def test_obfuscated_ip_literals_rejection(self, url: str):
+        result = validate_url_and_resolve(url)
+        assert result.is_valid is False
+        assert result.error_code in ("BLOCKED_IP_LITERAL", "SSRF_IP_BLOCKED")
+
+    @pytest.mark.parametrize(
         "ip_str",
         [
             "169.254.1.1",
@@ -143,6 +213,26 @@ class TestAntiSSRFValidation:
         result = validate_url_and_resolve(url)
         assert result.is_valid is False
         assert result.error_code == "BLOCKED_PORT"
+
+    def test_mixed_public_and_private_dns_answers_rejected(self):
+        """Verify that if a domain resolves to multiple IPs and ANY is private, it is rejected."""
+        with patch("app.scanner.anti_ssrf.resolve_hostname_ips") as mock_resolve:
+            # Domain returns legitimate public IP and malicious LAN private IP
+            mock_resolve.return_value = ["93.184.216.34", "192.168.1.50"]
+            result = validate_url_and_resolve("https://dual-homed-target.com")
+            assert result.is_valid is False
+            assert result.error_code == "SSRF_IP_BLOCKED"
+            assert "Private/LAN IP address rejected" in result.error_message
+
+    def test_dns_rebinding_simulation(self):
+        """Verify that DNS rebinding returning a loopback address is rejected."""
+        with patch("app.scanner.anti_ssrf.resolve_hostname_ips") as mock_resolve:
+            # Rebinding switch to loopback
+            mock_resolve.return_value = ["127.0.0.1"]
+            result = validate_url_and_resolve("https://rebind-attack.com")
+            assert result.is_valid is False
+            assert result.error_code == "SSRF_IP_BLOCKED"
+            assert "Loopback IP address rejected" in result.error_message
 
     def test_redirect_destination_validation(self):
         # Valid public redirect

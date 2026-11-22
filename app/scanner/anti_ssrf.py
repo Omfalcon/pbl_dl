@@ -8,6 +8,7 @@ Request Forgery (SSRF), DNS rebinding, and unauthorized LAN access.
 from __future__ import annotations
 
 import ipaddress
+import re
 import socket
 import urllib.parse
 from dataclasses import dataclass, field
@@ -121,7 +122,18 @@ class ValidationResult:
 
 
 def is_ip_disallowed(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> tuple[bool, str]:
-    """Inspect an IP address object and return whether it is blocked and the reason."""
+    """Inspect an IP address object and return whether it is blocked and the reason.
+    
+    Handles standard IPv4/IPv6, as well as IPv4-mapped and IPv4-compatible IPv6 addresses.
+    """
+    # If this is an IPv6 address that embeds an IPv4 address (e.g. ::ffff:192.168.1.1)
+    if isinstance(ip, ipaddress.IPv6Address):
+        if ip.ipv4_mapped is not None:
+            # Validate the underlying mapped IPv4 address
+            mapped_blocked, mapped_reason = is_ip_disallowed(ip.ipv4_mapped)
+            if mapped_blocked:
+                return True, f"IPv4-mapped IPv6 points to disallowed address: {mapped_reason}"
+
     # Check standard Python library classifications
     if ip.is_loopback:
         return True, f"Loopback IP address rejected: {ip}"
@@ -142,6 +154,63 @@ def is_ip_disallowed(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> tuple
             return True, f"IP address belongs to restricted network {network}: {ip}"
 
     return False, ""
+
+
+def _parse_nonstandard_ip_literal(host_str: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
+    """Attempt to parse standard or obfuscated IP representations (octal, hex, dword, decimal)."""
+    clean_host = host_str.strip("[]").strip()
+
+    # 1. Standard ipaddress parse
+    try:
+        return ipaddress.ip_address(clean_host)
+    except ValueError:
+        pass
+
+    # 2. Check for single DWORD / integer IP (e.g. 2130706433 -> 127.0.0.1)
+    if clean_host.isdigit():
+        try:
+            num = int(clean_host)
+            if 0 <= num <= 0xFFFFFFFF:
+                return ipaddress.IPv4Address(num)
+        except ValueError:
+            pass
+
+    # 3. Check for single Hex literal (e.g. 0x7f000001)
+    if clean_host.lower().startswith("0x"):
+        try:
+            num = int(clean_host, 16)
+            if 0 <= num <= 0xFFFFFFFF:
+                return ipaddress.IPv4Address(num)
+        except ValueError:
+            pass
+
+    # 4. Check for dotted octal or mixed hex/octal segments (e.g. 0177.0.0.1 or 0x7f.0.0.1)
+    parts = clean_host.split(".")
+    if len(parts) == 4:
+        parsed_octets = []
+        is_obfuscated = False
+        for p in parts:
+            p_strip = p.strip()
+            try:
+                if p_strip.lower().startswith("0x"):
+                    val = int(p_strip, 16)
+                    is_obfuscated = True
+                elif p_strip.startswith("0") and len(p_strip) > 1 and p_strip.isdigit():
+                    val = int(p_strip, 8)
+                    is_obfuscated = True
+                elif p_strip.isdigit():
+                    val = int(p_strip, 10)
+                else:
+                    return None
+                if not (0 <= val <= 255):
+                    return None
+                parsed_octets.append(val)
+            except ValueError:
+                return None
+        if is_obfuscated and len(parsed_octets) == 4:
+            return ipaddress.IPv4Address(bytes(parsed_octets))
+
+    return None
 
 
 def resolve_hostname_ips(hostname: str, port: int) -> list[str]:
@@ -180,6 +249,14 @@ def validate_url_and_resolve(
 ) -> ValidationResult:
     """Validate a user-submitted URL, resolve all DNS addresses, and enforce anti-SSRF rules.
     
+    Hardened against:
+    - Control characters and whitespace injection.
+    - Out-of-range, negative, and non-integer ports.
+    - Multiple @ signs and malformed authority strings.
+    - Percent-encoded hostnames and obfuscated IP literals (hex, octal, dword).
+    - IPv4-mapped IPv6 literals.
+    - Mixed public/private DNS records.
+    
     Args:
         url: The candidate URL string to evaluate.
         allowed_schemes: Permitted URL schemes (defaults to http, https).
@@ -201,9 +278,22 @@ def validate_url_and_resolve(
             error_message="URL must be a non-empty string"
         )
 
+    # 1. Sanitize control characters and unescaped whitespace
+    if any(ord(c) < 32 or ord(c) == 127 for c in url):
+        return ValidationResult(
+            is_valid=False,
+            url=url,
+            canonical_url="",
+            scheme="",
+            hostname="",
+            port=0,
+            error_code="MALFORMED_URL",
+            error_message="URL contains illegal control characters"
+        )
+
     url_clean = url.strip()
 
-    # Parse URL
+    # 2. Parse URL using urllib.parse.urlsplit
     try:
         parsed = urllib.parse.urlsplit(url_clean)
     except Exception as e:
@@ -218,8 +308,20 @@ def validate_url_and_resolve(
             error_message=f"Failed to parse URL: {e}"
         )
 
-    # 1. Scheme Validation
+    # 3. Scheme Validation
     scheme = parsed.scheme.lower()
+    if not scheme:
+        return ValidationResult(
+            is_valid=False,
+            url=url_clean,
+            canonical_url="",
+            scheme="",
+            hostname="",
+            port=0,
+            error_code="MISSING_SCHEME",
+            error_message="URL is missing an explicit protocol scheme"
+        )
+
     if scheme not in allowed_schemes:
         return ValidationResult(
             is_valid=False,
@@ -232,9 +334,9 @@ def validate_url_and_resolve(
             error_message=f"Scheme '{scheme}' is not permitted. Only {list(allowed_schemes)} are supported."
         )
 
-    # 2. Hostname Validation
-    hostname = parsed.hostname
-    if not hostname:
+    # 4. Authority & Hostname Parsing & Validation
+    netloc = parsed.netloc
+    if not netloc:
         return ValidationResult(
             is_valid=False,
             url=url_clean,
@@ -243,41 +345,125 @@ def validate_url_and_resolve(
             hostname="",
             port=0,
             error_code="MISSING_HOSTNAME",
+            error_message="URL does not contain a valid network location (authority)"
+        )
+
+    # Reject malformed authority with multiple '@' characters
+    if netloc.count("@") > 1:
+        return ValidationResult(
+            is_valid=False,
+            url=url_clean,
+            canonical_url="",
+            scheme=scheme,
+            hostname="",
+            port=0,
+            error_code="MALFORMED_AUTHORITY",
+            error_message="URL authority contains multiple '@' userinfo delimiters"
+        )
+
+    # Check for mismatched brackets in IPv6 authority
+    if ("[" in netloc and "]" not in netloc) or ("]" in netloc and "[" not in netloc):
+        return ValidationResult(
+            is_valid=False,
+            url=url_clean,
+            canonical_url="",
+            scheme=scheme,
+            hostname="",
+            port=0,
+            error_code="MALFORMED_IPV6_BRACKETS",
+            error_message="Mismatched square brackets in IPv6 address"
+        )
+
+    # Safely extract port and validate range
+    default_port = 443 if scheme == "https" else 80
+    try:
+        port = parsed.port if parsed.port is not None else default_port
+    except ValueError as ve:
+        return ValidationResult(
+            is_valid=False,
+            url=url_clean,
+            canonical_url="",
+            scheme=scheme,
+            hostname="",
+            port=0,
+            error_code="INVALID_PORT",
+            error_message=f"Port specification is invalid or out of range (1-65535): {ve}"
+        )
+
+    if not (1 <= port <= 65535):
+        return ValidationResult(
+            is_valid=False,
+            url=url_clean,
+            canonical_url="",
+            scheme=scheme,
+            hostname="",
+            port=port,
+            error_code="PORT_OUT_OF_RANGE",
+            error_message=f"Port {port} is outside valid TCP range (1-65535)"
+        )
+
+    # Safely extract hostname
+    try:
+        hostname = parsed.hostname
+    except ValueError as ve:
+        return ValidationResult(
+            is_valid=False,
+            url=url_clean,
+            canonical_url="",
+            scheme=scheme,
+            hostname="",
+            port=port,
+            error_code="INVALID_HOSTNAME",
+            error_message=f"Unable to extract hostname: {ve}"
+        )
+
+    if not hostname:
+        return ValidationResult(
+            is_valid=False,
+            url=url_clean,
+            canonical_url="",
+            scheme=scheme,
+            hostname="",
+            port=port,
+            error_code="MISSING_HOSTNAME",
             error_message="URL does not contain a valid hostname"
         )
 
-    hostname_lower = hostname.lower().strip(".")
+    # Decode any percent-encoded characters in hostname (e.g. %31%32%37.0.0.1 -> 127.0.0.1)
+    try:
+        decoded_hostname = urllib.parse.unquote(hostname)
+    except Exception:
+        decoded_hostname = hostname
+
+    hostname_clean = decoded_hostname.lower().strip(".")
 
     # Reject known blocked hostnames
-    if hostname_lower in BLOCKED_HOSTNAMES:
+    if hostname_clean in BLOCKED_HOSTNAMES:
         return ValidationResult(
             is_valid=False,
             url=url_clean,
             canonical_url="",
             scheme=scheme,
             hostname=hostname,
-            port=0,
+            port=port,
             error_code="BLOCKED_HOSTNAME",
             error_message=f"Access to blocked internal/metadata hostname '{hostname}' is forbidden"
         )
 
     for suffix in BLOCKED_HOSTNAME_SUFFIXES:
-        if hostname_lower.endswith(suffix):
+        if hostname_clean.endswith(suffix):
             return ValidationResult(
                 is_valid=False,
                 url=url_clean,
                 canonical_url="",
                 scheme=scheme,
                 hostname=hostname,
-                port=0,
+                port=port,
                 error_code="BLOCKED_DOMAIN_SUFFIX",
                 error_message=f"Access to internal domain suffix '{suffix}' is forbidden"
             )
 
-    # 3. Port Validation
-    default_port = 443 if scheme == "https" else 80
-    port = parsed.port if parsed.port is not None else default_port
-
+    # 5. Port Filtering
     if port in BLOCKED_PORTS:
         return ValidationResult(
             is_valid=False,
@@ -314,13 +500,11 @@ def validate_url_and_resolve(
             error_message=f"Non-standard web port {port} blocked in standard safe mode"
         )
 
-    # 4. Check if Hostname is a Raw IP Literal
-    is_literal_ip = False
-    try:
-        # Strip IPv6 brackets if present
-        raw_ip_str = hostname_lower.strip("[]")
-        ip_obj = ipaddress.ip_address(raw_ip_str)
-        is_literal_ip = True
+    # 6. Check if Hostname is a Raw, Octal, Hex, DWORD, or Standard IP Literal
+    ip_obj = _parse_nonstandard_ip_literal(hostname_clean)
+    is_literal_ip = ip_obj is not None
+
+    if is_literal_ip:
         blocked, reason = is_ip_disallowed(ip_obj)
         if blocked:
             return ValidationResult(
@@ -335,14 +519,25 @@ def validate_url_and_resolve(
                 error_message=reason
             )
         resolved_ips = [str(ip_obj)]
-    except ValueError:
-        # Not a literal IP, proceed with DNS resolution
-        pass
-
-    # 5. DNS Resolution & All-Address Inspection
-    if not is_literal_ip:
+    else:
+        # Normalize internationalized domain name (IDNA)
         try:
-            resolved_ips = resolve_hostname_ips(hostname_lower, port)
+            ascii_hostname = hostname_clean.encode("idna").decode("ascii")
+        except UnicodeError as ue:
+            return ValidationResult(
+                is_valid=False,
+                url=url_clean,
+                canonical_url="",
+                scheme=scheme,
+                hostname=hostname,
+                port=port,
+                error_code="INVALID_IDNA_HOSTNAME",
+                error_message=f"Hostname cannot be encoded into IDNA/ASCII: {ue}"
+            )
+
+        # 7. DNS Resolution & All-Address Inspection
+        try:
+            resolved_ips = resolve_hostname_ips(ascii_hostname, port)
         except SSRFValidationError as e:
             return ValidationResult(
                 is_valid=False,
@@ -355,11 +550,11 @@ def validate_url_and_resolve(
                 error_message=str(e)
             )
 
-        # Inspect EVERY resolved IP address
+        # Inspect EVERY resolved IP address in the returned set
         for ip_str in resolved_ips:
             try:
-                ip_obj = ipaddress.ip_address(ip_str)
-                blocked, reason = is_ip_disallowed(ip_obj)
+                ip_check = ipaddress.ip_address(ip_str)
+                blocked, reason = is_ip_disallowed(ip_check)
                 if blocked:
                     return ValidationResult(
                         is_valid=False,
@@ -384,11 +579,11 @@ def validate_url_and_resolve(
                     error_message=f"Resolved invalid IP '{ip_str}': {e}"
                 )
 
-    # Canonicalize URL format
+    # 8. Canonicalize URL format
     canonical_port = f":{port}" if (scheme == "http" and port != 80) or (scheme == "https" and port != 443) else ""
     path = parsed.path if parsed.path else "/"
     query = f"?{parsed.query}" if parsed.query else ""
-    canonical_url = f"{scheme}://{hostname_lower}{canonical_port}{path}{query}"
+    canonical_url = f"{scheme}://{hostname_clean}{canonical_port}{path}{query}"
 
     pinned_ip = resolved_ips[0] if resolved_ips else None
 
@@ -397,7 +592,7 @@ def validate_url_and_resolve(
         url=url_clean,
         canonical_url=canonical_url,
         scheme=scheme,
-        hostname=hostname_lower,
+        hostname=hostname_clean,
         port=port,
         resolved_ips=resolved_ips,
         pinned_ip=pinned_ip
@@ -406,7 +601,7 @@ def validate_url_and_resolve(
 
 def validate_redirect_target(target_url: str, base_url: str | None = None) -> ValidationResult:
     """Validate a navigation or redirect target URL, resolving relative URLs if needed."""
-    if not target_url:
+    if not target_url or not isinstance(target_url, str) or not target_url.strip():
         return ValidationResult(
             is_valid=False,
             url="",
@@ -420,8 +615,8 @@ def validate_redirect_target(target_url: str, base_url: str | None = None) -> Va
 
     # Resolve relative redirects against base URL
     if base_url:
-        full_url = urllib.parse.urljoin(base_url, target_url)
+        full_url = urllib.parse.urljoin(base_url, target_url.strip())
     else:
-        full_url = target_url
+        full_url = target_url.strip()
 
     return validate_url_and_resolve(full_url)

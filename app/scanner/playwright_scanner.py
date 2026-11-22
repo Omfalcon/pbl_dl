@@ -1,14 +1,16 @@
 """Secure Playwright-based Website Scanner for PhishVision AI.
 
-Executes isolated browser sessions with pre-connection anti-SSRF enforcement,
-redirect tracing, viewport/full-page screenshot rendering, DOM extraction,
-form analysis, and script metadata collection.
+Executes isolated browser sessions with connection-level Anti-SSRF enforcement,
+validating egress proxy tunneling, context-level route interception, service worker
+blocking, popup containment, secure TLS certificate validation, and comprehensive
+forensic DOM and screenshot extraction.
 """
 
 from __future__ import annotations
 
 import asyncio
 import os
+import sys
 import time
 import urllib.parse
 import uuid
@@ -42,9 +44,9 @@ from app.scanner.models import (
     ScanStatus,
     ScriptInfo,
 )
+from app.scanner.proxy import ValidatingEgressProxy
 
 
-# Default directories for scan evidence
 DEFAULT_SCREENSHOT_DIR = Path("data/scans/screenshots")
 DEFAULT_DOM_DIR = Path("data/scans/dom")
 
@@ -91,16 +93,13 @@ def parse_dom_evidence(
         action_raw = form.get("action", "")
         method = (form.get("method") or "GET").upper()
 
-        # Resolve action URL relative to base URL
         action_full = urllib.parse.urljoin(base_url, action_raw) if action_raw else base_url
         action_domain = _get_registrable_domain(action_full)
         is_external = bool(action_domain and base_domain and action_domain != base_domain)
 
-        # Parse Fields
         fields: list[FormField] = []
         has_password = False
 
-        # Input elements
         for inp in form.find_all(["input", "button", "textarea"]):
             field_type = (inp.get("type") or "text").lower()
             name = inp.get("name") or ""
@@ -170,8 +169,49 @@ def parse_dom_evidence(
     return title, forms, scripts, meta_tags
 
 
+def _get_browser_launch_args() -> list[str]:
+    """Return hardened Chromium launch flags appropriate for the current platform."""
+    base_args = [
+        "--disable-dev-shm-usage",
+        "--disable-extensions",
+        "--disable-background-networking",
+        "--disable-sync",
+        "--disable-translate",
+        "--metrics-recording-only",
+        "--no-first-run",
+        "--safebrowsing-disable-auto-update",
+    ]
+
+    # Only pass --no-sandbox if explicitly mandated by unprivileged Linux container execution
+    is_linux = sys.platform.startswith("linux")
+    container_mode = os.environ.get("PHISHVISION_CONTAINER_MODE", "0") == "1"
+
+    if is_linux and container_mode:
+        base_args.extend(["--no-sandbox", "--disable-setuid-sandbox"])
+
+    return base_args
+
+
+def _is_tls_certificate_error(error_message: str) -> bool:
+    """Detect whether a Playwright navigation failure stems from an invalid TLS certificate."""
+    tls_error_tokens = [
+        "net::err_cert_authority_invalid",
+        "net::err_cert_common_name_invalid",
+        "net::err_cert_date_invalid",
+        "net::err_cert_invalid",
+        "net::err_cert_revoked",
+        "net::err_cert_weak_signature_algorithm",
+        "net::err_ssl_pinned_key_not_in_cert_chain",
+        "certificate_verify_failed",
+        "ssl_error",
+        "err_ssl_protocol_error",
+    ]
+    msg_lower = error_message.lower()
+    return any(token in msg_lower for token in tls_error_tokens)
+
+
 class PlaywrightScanner:
-    """High-assurance secure website scanner utilizing Playwright headless browser."""
+    """High-assurance secure website scanner with connection-level egress enforcement."""
 
     def __init__(
         self,
@@ -184,15 +224,7 @@ class PlaywrightScanner:
         self.dom_dir.mkdir(parents=True, exist_ok=True)
 
     async def scan(self, url: str, options: ScanOptions | None = None) -> ScanResult:
-        """Asynchronously scan a target URL in an isolated headless browser context.
-        
-        Args:
-            url: Target URL to inspect.
-            options: Scan configuration options.
-            
-        Returns:
-            ScanResult containing full forensic artifacts and telemetry.
-        """
+        """Asynchronously scan a target URL with Anti-SSRF proxy enforcement and secure TLS checking."""
         scan_id = str(uuid.uuid4())
         opts = options or ScanOptions()
         start_time = time.perf_counter()
@@ -225,159 +257,218 @@ class PlaywrightScanner:
         warnings: list[str] = []
         redirect_chain: list[RedirectHop] = []
         domain_transitions: list[str] = [val_result.hostname]
+        tls_error_detail: str | None = None
+        popups_closed_count = 0
 
         # ---------------------------------------------------------------------
-        # 2. Ephemeral Browser Context Initialization
+        # 2. Start Validating Egress Proxy (Network-Level Connection Pinning)
         # ---------------------------------------------------------------------
-        async with async_playwright() as p:
-            browser: Browser = await p.chromium.launch(
-                headless=True,
-                args=[
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--disable-extensions",
-                    "--disable-gpu",
-                ],
-            )
+        proxy: ValidatingEgressProxy | None = None
+        browser: Browser | None = None
+        context: BrowserContext | None = None
+        page: Page | None = None
 
-            context: BrowserContext = await browser.new_context(
-                viewport={"width": opts.viewport_width, "height": opts.viewport_height},
-                user_agent=opts.user_agent
-                or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 PhishVision/0.1",
-                ignore_https_errors=True,
-                accept_downloads=False,
-            )
-
-            page: Page = await context.new_page()
-
-            # Prevent automatic file downloads
-            page.on("download", lambda download: asyncio.create_task(download.cancel()))
-
-            # Track request route for runtime Anti-SSRF re-validation on redirects
-            ssrf_aborted = False
-
-            async def route_interceptor(route):
-                nonlocal ssrf_aborted
-                request_url = route.request.url
-                # Only strictly validate http/https requests
-                if request_url.startswith(("http://", "https://")):
-                    step_val = validate_redirect_target(request_url, base_url=canonical_url)
-                    if not step_val.is_valid:
-                        ssrf_aborted = True
-                        warnings.append(f"Sub-request or redirect blocked by Anti-SSRF: {request_url} ({step_val.error_message})")
-                        await route.abort("blockedbyclient")
-                        return
-                await route.continue_()
-
-            await page.route("**/*", route_interceptor)
-
-            # Record Redirect Responses
-            def handle_response(response: Response):
-                try:
-                    req = response.request
-                    if req.is_navigation_request():
-                        status = response.status
-                        hop_url = response.url
-                        hop_domain = _get_registrable_domain(hop_url)
-                        if hop_domain and hop_domain not in domain_transitions:
-                            domain_transitions.append(hop_domain)
-
-                        headers_dict = dict(list(response.headers.items())[:15])  # Cap header count
-                        redirect_chain.append(
-                            RedirectHop(
-                                step=len(redirect_chain) + 1,
-                                url=hop_url,
-                                status_code=status,
-                                domain=hop_domain or urllib.parse.urlsplit(hop_url).hostname or "",
-                                headers=headers_dict,
-                            )
-                        )
-                except Exception as ex:
-                    warnings.append(f"Telemetry logging error on response: {ex}")
-
-            page.on("response", handle_response)
+        try:
+            proxy_config = None
+            if opts.enable_egress_proxy:
+                proxy = ValidatingEgressProxy()
+                await proxy.start()
+                proxy_config = {"server": proxy.proxy_url}
 
             # -----------------------------------------------------------------
-            # 3. Dynamic Page Navigation with Graceful Timeouts
+            # 3. Isolated Browser Context Setup
             # -----------------------------------------------------------------
-            status = ScanStatus.COMPLETED
-            final_status_code: int | None = None
-            final_url = canonical_url
-
-            try:
-                response = await page.goto(
-                    canonical_url,
-                    timeout=opts.timeout_seconds * 1000,
-                    wait_until="domcontentloaded",
+            async with async_playwright() as p:
+                launch_args = _get_browser_launch_args()
+                browser = await p.chromium.launch(
+                    headless=True,
+                    args=launch_args,
+                    proxy=proxy_config,
                 )
-                if response:
-                    final_status_code = response.status
-                    final_url = response.url
-                else:
-                    final_url = page.url
-            except PlaywrightTimeoutError:
-                status = ScanStatus.TIMED_OUT
-                errors.append(f"Navigation timed out after {opts.timeout_seconds} seconds")
-                final_url = page.url or canonical_url
-            except PlaywrightError as pe:
-                status = ScanStatus.FAILED
-                errors.append(f"Browser navigation error: {pe.message}")
-                final_url = page.url or canonical_url
-            except Exception as e:
-                status = ScanStatus.FAILED
-                errors.append(f"Unexpected browser error: {e}")
-                final_url = page.url or canonical_url
 
-            if ssrf_aborted and status == ScanStatus.FAILED:
-                status = ScanStatus.BLOCKED_SSRF
+                # Configure context with service worker blocking & TLS verification
+                context_kwargs: dict[str, Any] = {
+                    "viewport": {"width": opts.viewport_width, "height": opts.viewport_height},
+                    "user_agent": opts.user_agent
+                    or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 PhishVision/0.1",
+                    "ignore_https_errors": opts.ignore_https_errors,
+                    "accept_downloads": False,
+                }
 
-            # -----------------------------------------------------------------
-            # 4. Forensic Evidence Collection (Screenshots & DOM)
-            # -----------------------------------------------------------------
-            viewport_shot_path: str | None = None
-            fullpage_shot_path: str | None = None
-            dom_path: str | None = None
-            html_content = ""
+                if opts.block_service_workers:
+                    context_kwargs["service_workers"] = "block"
 
-            try:
-                # Capture rendered HTML content
-                html_content = await page.content()
-                if html_content:
-                    dom_file = self.dom_dir / f"{scan_id}_dom.html"
-                    dom_file.write_text(html_content, encoding="utf-8", errors="replace")
-                    dom_path = str(dom_file)
-            except Exception as e:
-                warnings.append(f"Failed to capture DOM: {e}")
+                context = await browser.new_context(**context_kwargs)
 
-            try:
-                # Viewport Screenshot (Standard 1280x720)
-                v_file = self.screenshot_dir / f"{scan_id}_viewport.png"
-                await page.screenshot(path=str(v_file), full_page=False)
-                viewport_shot_path = str(v_file)
-            except Exception as e:
-                warnings.append(f"Failed to capture viewport screenshot: {e}")
+                # Create primary scanning page
+                page = await context.new_page()
+                page.on("download", lambda d: asyncio.create_task(d.cancel()))
 
-            if opts.capture_full_page and status == ScanStatus.COMPLETED:
+                # Popup containment: close any secondary / unsolicited popup pages
+                if opts.block_popups:
+                    def handle_popup(new_page: Page):
+                        nonlocal popups_closed_count
+                        if new_page != page:
+                            popups_closed_count += 1
+                            warnings.append(f"Unsolicited popup blocked and closed: {new_page.url or 'about:blank'}")
+                            asyncio.create_task(new_page.close())
+
+                    context.on("page", handle_popup)
+
+                # Context-level request routing & revalidation (covers all pages, frames, workers)
+                route_abort_count = 0
+
+                async def context_route_interceptor(route):
+                    nonlocal route_abort_count
+                    req_url = route.request.url
+                    if req_url.startswith(("http://", "https://")):
+                        target_val = validate_redirect_target(req_url, base_url=canonical_url)
+                        if not target_val.is_valid:
+                            route_abort_count += 1
+                            warnings.append(
+                                f"Subresource or navigation blocked by route policy: {req_url} ({target_val.error_message})"
+                            )
+                            await route.abort("blockedbyclient")
+                            return
+                    await route.continue_()
+
+                await context.route("**/*", context_route_interceptor)
+
+                # Telemetry listener for redirects
+                def handle_response(response: Response):
+                    try:
+                        req = response.request
+                        if req.is_navigation_request():
+                            status = response.status
+                            hop_url = response.url
+                            hop_domain = _get_registrable_domain(hop_url)
+                            if hop_domain and hop_domain not in domain_transitions:
+                                domain_transitions.append(hop_domain)
+
+                            headers_dict = dict(list(response.headers.items())[:15])
+                            redirect_chain.append(
+                                RedirectHop(
+                                    step=len(redirect_chain) + 1,
+                                    url=hop_url,
+                                    status_code=status,
+                                    domain=hop_domain or urllib.parse.urlsplit(hop_url).hostname or "",
+                                    headers=headers_dict,
+                                )
+                            )
+                    except Exception as ex:
+                        warnings.append(f"Telemetry logging error: {ex}")
+
+                page.on("response", handle_response)
+
+                # -------------------------------------------------------------
+                # 4. Execute Page Navigation
+                # -------------------------------------------------------------
+                status = ScanStatus.COMPLETED
+                final_status_code: int | None = None
+                final_url = canonical_url
+
                 try:
-                    # Full-page Screenshot
-                    f_file = self.screenshot_dir / f"{scan_id}_full.png"
-                    await page.screenshot(path=str(f_file), full_page=True, timeout=5000)
-                    fullpage_shot_path = str(f_file)
+                    response = await page.goto(
+                        canonical_url,
+                        timeout=opts.timeout_seconds * 1000,
+                        wait_until="domcontentloaded",
+                    )
+                    if response:
+                        final_status_code = response.status
+                        final_url = response.url
+                    else:
+                        final_url = page.url
+                except PlaywrightTimeoutError:
+                    status = ScanStatus.TIMED_OUT
+                    errors.append(f"Navigation timed out after {opts.timeout_seconds} seconds")
+                    final_url = str(page.url) if isinstance(getattr(page, "url", None), str) and page.url else canonical_url
+                except PlaywrightError as pe:
+                    if _is_tls_certificate_error(pe.message):
+                        status = ScanStatus.CERT_ERROR
+                        tls_error_detail = pe.message
+                        errors.append(f"TLS certificate validation failed: {pe.message}")
+                        warnings.append("Security warning: Target domain served an invalid or untrusted TLS certificate")
+                    else:
+                        status = ScanStatus.FAILED
+                        errors.append(f"Browser navigation error: {pe.message}")
+                    final_url = str(page.url) if isinstance(getattr(page, "url", None), str) and page.url else canonical_url
                 except Exception as e:
-                    warnings.append(f"Failed to capture full-page screenshot: {e}")
+                    status = ScanStatus.FAILED
+                    errors.append(f"Unexpected browser failure: {e}")
+                    final_url = str(page.url) if isinstance(getattr(page, "url", None), str) and page.url else canonical_url
 
+                # If proxy blocked the primary connection
+                if proxy and proxy.blocked_requests and status == ScanStatus.FAILED:
+                    status = ScanStatus.BLOCKED_SSRF
+                    errors.append(f"Egress connection blocked by Anti-SSRF proxy: {proxy.blocked_requests[0]['reason']}")
+
+                # -------------------------------------------------------------
+                # 5. Capture Screenshots & Rendered DOM Evidence
+                # -------------------------------------------------------------
+                viewport_shot_path: str | None = None
+                fullpage_shot_path: str | None = None
+                dom_path: str | None = None
+                html_content = ""
+
+                try:
+                    content_val = await page.content()
+                    if isinstance(content_val, str) and content_val:
+                        html_content = content_val
+                        dom_file = self.dom_dir / f"{scan_id}_dom.html"
+                        dom_file.write_text(html_content, encoding="utf-8", errors="replace")
+                        dom_path = str(dom_file)
+                except Exception as e:
+                    warnings.append(f"Failed to capture DOM: {e}")
+
+                if status in (ScanStatus.COMPLETED, ScanStatus.TIMED_OUT) and html_content:
+                    try:
+                        v_file = self.screenshot_dir / f"{scan_id}_viewport.png"
+                        await page.screenshot(path=str(v_file), full_page=False, timeout=5000)
+                        viewport_shot_path = str(v_file)
+                    except Exception as e:
+                        warnings.append(f"Failed to capture viewport screenshot: {e}")
+
+                    if opts.capture_full_page and status == ScanStatus.COMPLETED:
+                        try:
+                            f_file = self.screenshot_dir / f"{scan_id}_full.png"
+                            await page.screenshot(path=str(f_file), full_page=True, timeout=5000)
+                            fullpage_shot_path = str(f_file)
+                        except Exception as e:
+                            warnings.append(f"Failed to capture full-page screenshot: {e}")
+
+                # -------------------------------------------------------------
+                # 6. Parse DOM Intelligence
+                # -------------------------------------------------------------
+                page_title, forms, scripts, meta_tags = parse_dom_evidence(html_content, final_url)
+
+                # Ensure context and browser are explicitly closed
+                await context.close()
+                await browser.close()
+                context = None
+                browser = None
+
+        finally:
             # -----------------------------------------------------------------
-            # 5. DOM Information Extraction (Forms, Inputs, Scripts, Metadata)
+            # 7. Guaranteed Resource & Proxy Cleanup
             # -----------------------------------------------------------------
-            page_title, forms, scripts, meta_tags = parse_dom_evidence(html_content, final_url)
+            if context:
+                try:
+                    await context.close()
+                except Exception:
+                    pass
+            if browser:
+                try:
+                    await browser.close()
+                except Exception:
+                    pass
+            if proxy:
+                try:
+                    await proxy.stop()
+                except Exception:
+                    pass
 
-            # Cleanup browser resources
-            await context.close()
-            await browser.close()
-
-        # Compute elapsed time
         elapsed_ms = (time.perf_counter() - start_time) * 1000.0
+        proxy_blocked = len(proxy.blocked_requests) if proxy else 0
 
         return ScanResult(
             scan_id=scan_id,
@@ -395,6 +486,9 @@ class PlaywrightScanner:
             forms=forms,
             scripts=scripts,
             meta_tags=meta_tags,
+            tls_error=tls_error_detail,
+            pinned_ip=pinned_ip,
+            proxy_blocked_count=proxy_blocked,
             scan_duration_ms=round(elapsed_ms, 2),
             errors=errors,
             warnings=warnings,
@@ -402,6 +496,8 @@ class PlaywrightScanner:
                 "pinned_ip": pinned_ip,
                 "resolved_ips": val_result.resolved_ips,
                 "pre_validation_valid": val_result.is_valid,
+                "proxy_intercepted_count": len(proxy.intercepted_requests) if proxy else 0,
+                "popups_closed_count": popups_closed_count,
             },
         )
 
@@ -410,7 +506,6 @@ class PlaywrightScanner:
         try:
             return asyncio.run(self.scan(url, options))
         except RuntimeError:
-            # If an event loop is already running (e.g. in test runner or async caller)
             import concurrent.futures
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 return pool.submit(asyncio.run, self.scan(url, options)).result()

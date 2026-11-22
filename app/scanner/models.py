@@ -14,6 +14,7 @@ class ScanStatus(str, Enum):
     FAILED = "FAILED"
     TIMED_OUT = "TIMED_OUT"
     BLOCKED_SSRF = "BLOCKED_SSRF"
+    CERT_ERROR = "CERT_ERROR"
     IN_PROGRESS = "IN_PROGRESS"
 
 
@@ -67,6 +68,24 @@ class ScanOptions(BaseModel):
     user_agent: str | None = Field(default=None)
     extract_scripts: bool = Field(default=True)
     extract_forms: bool = Field(default=True)
+    
+    # Security Hardening Flags
+    ignore_https_errors: bool = Field(
+        default=False,
+        description="Whether to ignore TLS certificate errors. False by default for secure verification."
+    )
+    enable_egress_proxy: bool = Field(
+        default=True,
+        description="Enforce connection-level anti-SSRF IP pinning via validating local forward proxy."
+    )
+    block_service_workers: bool = Field(
+        default=True,
+        description="Block service workers to eliminate route interception evasion."
+    )
+    block_popups: bool = Field(
+        default=True,
+        description="Automatically close popup windows to prevent unmonitored navigation."
+    )
 
 
 class ScanResult(BaseModel):
@@ -90,6 +109,11 @@ class ScanResult(BaseModel):
     forms: list[FormInfo] = Field(default_factory=list, description="Parsed HTML forms and targets")
     scripts: list[ScriptInfo] = Field(default_factory=list, description="Discovered script references")
     meta_tags: dict[str, str] = Field(default_factory=dict, description="Extracted HTML meta tags")
+    
+    # Security Telemetry
+    tls_error: str | None = Field(default=None, description="TLS certificate validation error details if handshake failed")
+    pinned_ip: str | None = Field(default=None, description="Validated public IP bound for outbound connection")
+    proxy_blocked_count: int = Field(default=0, description="Count of outbound requests blocked by Anti-SSRF proxy")
     
     # Operational Telemetry
     scan_duration_ms: float = Field(default=0.0, description="Total execution duration in milliseconds")

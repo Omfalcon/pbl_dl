@@ -1,35 +1,38 @@
 # CURRENT_PHASE.md — Active Phase Status
 
-**Active Phase:** Phase 1 — Repository Foundation & Secure Playwright Website Scanner  
+**Active Phase:** Phase 1 — Repository Foundation, Secure Playwright Scanner & Security Hardening (Phase 1.1)  
 **Phase Status:** COMPLETED  
 **Transitioning To:** Phase 2 — Dataset Acquisition, Brand Gallery, Annotation & Splitting  
 **Timestamp:** 2026-11-22  
 
 ---
 
-## 1. Phase 1 Objectives & Deliverables Checklist
+## 1. Phase 1 & 1.1 Objectives & Deliverables Checklist
 
 | Deliverable | File Path | Status | Verification Notes |
 | :--- | :--- | :--- | :--- |
 | **Package Architecture Foundation** | `app/`, `config/`, `tests/`, `data/`, `models/` | COMPLETED | Clean Python package hierarchy with `__init__.py` modules established. |
-| **Anti-SSRF & DNS Pinning Engine** | [`app/scanner/anti_ssrf.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/scanner/anti_ssrf.py) | COMPLETED | Complete validation of schemes, ports, hostnames, DNS resolution, and IP classification. |
-| **Pydantic Scanner Output Models** | [`app/scanner/models.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/scanner/models.py) | COMPLETED | Structured telemetry schemas for `ScanResult`, `FormInfo`, `ScriptInfo`, `RedirectHop`. |
-| **Playwright Isolated Scanner** | [`app/scanner/playwright_scanner.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/scanner/playwright_scanner.py) | COMPLETED | Ephemeral Chromium runner with screenshot capture, DOM serialization, and redirect tracing. |
-| **Anti-SSRF Unit Test Suite** | [`tests/test_anti_ssrf.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/tests/test_anti_ssrf.py) | COMPLETED | 51 test cases verifying scheme, localhost, private IPv4/IPv6, link-local, and metadata blocking. |
-| **Scanner & Live Navigation Tests**| [`tests/test_scanner.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/tests/test_scanner.py) | COMPLETED | 4 test cases verifying DOM parsing, SSRF rejection without browser launch, schema dump, and live scan. |
-| **Live Scan Verification** | Safe Public Website (`https://example.com`) | COMPLETED | Verified live capture: screenshot rendered, DOM serialized, status 200, duration 1429ms. |
+| **Hardened Anti-SSRF Engine** | [`app/scanner/anti_ssrf.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/scanner/anti_ssrf.py) | COMPLETED | Hardened against out-of-range ports, control chars, malformed authorities, obfuscated IP literals (dword, hex, octal), and IPv4-mapped IPv6. |
+| **Validating Egress Forward Proxy** | [`app/scanner/proxy.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/scanner/proxy.py) | COMPLETED | Enforces actual connection-level IP safety by intercepting HTTP/CONNECT requests and binding outbound sockets strictly to validated public IPs while preserving TLS SNI. |
+| **Pydantic Scanner Output Models** | [`app/scanner/models.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/scanner/models.py) | COMPLETED | Structured telemetry schemas for `ScanResult`, `ScanOptions`, `FormInfo`, `ScriptInfo`, `RedirectHop`, `tls_error`, and `pinned_ip`. |
+| **Hardened Playwright Scanner** | [`app/scanner/playwright_scanner.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/scanner/playwright_scanner.py) | COMPLETED | Context-level route interception, popup containment, service worker blocking, default secure TLS verification (`ignore_https_errors=False`), and robust cleanup. |
+| **Anti-SSRF Unit Test Suite** | [`tests/test_anti_ssrf.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/tests/test_anti_ssrf.py) | COMPLETED | 72 test cases verifying schemes, ports, authorities, obfuscated IPs, IPv4-mapped IPv6, mixed DNS answers, and DNS rebinding simulation. |
+| **Scanner & Security Hardening Tests**| [`tests/test_scanner.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/tests/test_scanner.py) | COMPLETED | 13 test cases verifying proxy CONNECT/GET blocking, DOM parsing, TLS failure capture, exception cleanup, and live proxy scan. |
+| **Pytest Configuration** | [`pytest.ini`](file:///c:/Users/hp/PycharmProjects/pbl_dl/pytest.ini) | COMPLETED | Registered `integration` test marker to decouple offline unit tests from internet-dependent suites. |
 
 ---
 
-## 2. Phase 1 Exit Criteria Verification
+## 2. Phase 1 & 1.1 Exit Criteria Verification
 
-- [x] **Strict Anti-SSRF Enforcement:** Out-of-band DNS resolution inspecting every returned IP address. Private subnets (RFC 1918), loopback (`127.0.0.0/8`, `::1`), link-local (`169.254.0.0/16`), cloud metadata (`169.254.169.254`), and CGNAT (`100.64.0.0/10`) reliably blocked.
-- [x] **Zero Credential Submission:** Scanner operates in passive observation mode only; never enters credentials or triggers forms.
-- [x] **Disabled File Downloads:** Browser context rejects automatic file downloads; download events are immediately cancelled.
-- [x] **Evidence Preservation:** High-resolution viewport screenshot, full-page screenshot, and rendered HTML DOM tree saved with unique UUID-based filenames.
-- [x] **Deprecations & Warnings Resolved:** Public Suffix List resolution updated to `top_domain_under_public_suffix` with backwards compatibility.
-- [x] **Automated Tests Passing:** All 55 test cases in `tests/` pass with zero failures (`55 passed in 2.92s`).
-- [x] **Controlled Live Scan Succeeded:** Tested against `https://example.com`; verified HTML and PNG artifacts saved and accessible.
+- [x] **Connection-Level DNS/IP Enforcement:** Enforced through `ValidatingEgressProxy`. The browser communicates with target hosts exclusively through a local forward proxy that validates destinations and binds TCP sockets directly to the pre-validated `pinned_ip`. TLS SNI and Host headers are preserved end-to-end.
+- [x] **Browser Isolation & Sandbox Safety:** Removed insecure `--no-sandbox` flags from standard Windows execution. Only flags strictly necessary for headless automation are passed. Documented that true OS-level network namespace isolation requires Docker container deployment.
+- [x] **Context-Level Request Interception:** Interception registered via `context.route("**/*")` to cover all frames, workers, and popups.
+- [x] **Service Worker Blocking:** Context configured with `service_workers="block"` to eliminate interception gaps.
+- [x] **Popup Containment:** Context intercepts unsolicited popups and closes them automatically without interrupting the primary scan.
+- [x] **Secure Default TLS Verification:** `ignore_https_errors` defaults to `False`. Certificate verification failures are captured as structured scan evidence (`CERT_ERROR` status, `tls_error` details) rather than treated as successful navigations.
+- [x] **URL Parser Hardening:** Hardened against control characters, malformed authorities (`user@pass@host`), out-of-range ports (<1 or >65535), hex/octal/dword IP representations, and IPv4-mapped IPv6 literals (`[::ffff:127.0.0.1]`).
+- [x] **Reliable Resource Cleanup:** Browser context, browser process, and proxy server sockets are guaranteed closed via `try/finally` blocks.
+- [x] **Regression & Unit Testing:** All 84 unit tests pass in 0.68s without internet dependencies; live controlled scan with proxy passes in integration test suite.
 
 ---
 

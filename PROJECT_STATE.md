@@ -1,7 +1,7 @@
 # PROJECT_STATE.md — Persistent Project State
 
 **Project:** PhishVision AI (Phishing Website and Brand Impersonation Detector)  
-**Current Phase:** 1 — Repository Foundation & Secure Playwright Website Scanner  
+**Current Phase:** 1 — Repository Foundation, Secure Playwright Scanner & Security Hardening (Phase 1.1)  
 **Phase Status:** COMPLETED  
 **Next Phase:** 2 — Dataset Acquisition, Brand Gallery, Annotation & Splitting  
 **Last Updated:** 2026-11-22  
@@ -13,22 +13,24 @@
 PhishVision AI is an AI-powered phishing website detection and brand impersonation platform combining lexical URL intelligence, deep computer vision, behavioral and sequence analysis, and calibrated multi-evidence risk fusion.
 
 - **Phase 0 (System Architecture & Requirements):** COMPLETED.
-- **Phase 1 (Repository Foundation & Secure Website Scanner):** COMPLETED.
-  - Full Python package foundation created (`app/`, `config/`, `tests/`, `data/`, `models/`).
-  - Production Anti-SSRF engine (`app/scanner/anti_ssrf.py`) implemented with scheme validation, port filtering, DNS resolution pinning, and full IPv4/IPv6 classification (blocking private RFC 1918, loopback, link-local, cloud metadata, and CGNAT).
-  - Isolated Playwright Chromium scanner (`app/scanner/playwright_scanner.py`) operational, capturing viewport/full-page screenshots, serialized DOM snapshots, form/input extraction, script discovery, and redirect sequences.
-  - Complete Pydantic telemetry models (`app/scanner/models.py`) adhering to `API_CONTRACTS.md`.
-  - Comprehensive test suite (`55 passed in 2.92s`) and live scan on `https://example.com` verified.
+- **Phase 1 & Phase 1.1 (Repository Foundation, Scanner Implementation & Security Hardening):** COMPLETED.
+  - Package foundation established (`app/`, `config/`, `tests/`, `data/`, `models/`).
+  - Production Anti-SSRF engine (`app/scanner/anti_ssrf.py`) hardened against malformed ports, authorities, control characters, obfuscated IPs (dword, hex, octal), and IPv4-mapped IPv6 literals.
+  - **Connection-Level IP Safety Enforced:** Implemented `ValidatingEgressProxy` (`app/scanner/proxy.py`), ensuring that all outbound HTTP and HTTPS CONNECT requests are intercepted, validated, and bound strictly to the pre-validated public `pinned_ip`, preserving end-to-end TLS SNI while neutralizing DNS rebinding attacks.
+  - **Browser Hardening:** Removed insecure `--no-sandbox` flags from standard Windows execution; configured context-level route interception, service worker blocking (`service_workers="block"`), popup containment, and default secure TLS certificate verification (`ignore_https_errors=False`).
+  - Structured Pydantic telemetry models (`app/scanner/models.py`) with `tls_error`, `pinned_ip`, and `proxy_blocked_count`.
+  - Comprehensive test suite: **85 tests passing** (84 unit tests in 0.68s + 1 live integration test).
 
 ---
 
 ## 2. Current State Snapshot
 
-- **Active Phase:** `Phase 1` (COMPLETED)
+- **Active Phase:** `Phase 1 / 1.1` (COMPLETED)
 - **Target Next Phase:** `Phase 2` (Dataset Acquisition, Brand Gallery, Annotation & Splitting)
 - **Working Modules:**
-  - `app.scanner.anti_ssrf`: Pre-connection DNS resolution, port validation, and IP classification.
-  - `app.scanner.playwright_scanner`: Headless Chromium dynamic web scanner with route interception and download blocking.
+  - `app.scanner.anti_ssrf`: Hardened URL parsing, port validation, DNS resolution, and IP classification.
+  - `app.scanner.proxy`: Validating local egress forward proxy with connection-level IP pinning and TLS SNI preservation.
+  - `app.scanner.playwright_scanner`: Isolated Playwright Chromium scanner with context-level routing, popup containment, service worker blocking, and secure TLS checking.
   - `app.scanner.models`: Pydantic structured scan telemetry schemas.
 - **Working Environment:**
   - Python: `3.13.3` (Located at `C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe`)
@@ -45,29 +47,31 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
 2. Verified Python virtual environment with CUDA 12.4 PyTorch support.
 3. Formally mandated Python + React as exclusive project technology (ADR-001) and established Visual Intelligence as central research pillar (ADR-009).
 
-### Phase 1: Repository Foundation & Secure Playwright Scanner (COMPLETED)
+### Phase 1 & 1.1: Scanner Implementation & Security Hardening (COMPLETED)
 1. **Package Hierarchy:** Created `app/core/`, `app/scanner/`, `app/intelligence/`, `app/fusion/`, `app/api/`, `config/`, `tests/`, `data/`, `models/` with `__init__.py` modules.
-2. **Anti-SSRF Module (`app/scanner/anti_ssrf.py`):**
-   - Scheme and hostname sanitization.
-   - Socket `getaddrinfo` resolution inspecting all returned IPv4/IPv6 addresses.
-   - Complete subnet blacklisting: RFC 1918, RFC 4193, loopback, link-local, cloud metadata (`169.254.169.254`, `metadata.google.internal`), CGNAT (`100.64.0.0/10`), broadcast, and reserved addresses.
-   - Administrative port blocking (SSH, Telnet, SMB, databases, Redis).
-   - DNS rebinding mitigation via IP pinning.
-   - Redirect target revalidation (`validate_redirect_target`).
-3. **Structured Telemetry Models (`app/scanner/models.py`):**
-   - Pydantic models for `RedirectHop`, `FormField`, `FormInfo`, `ScriptInfo`, `ScanOptions`, and `ScanResult`.
-4. **Playwright Scanner (`app/scanner/playwright_scanner.py`):**
-   - Ephemeral headless Chromium context execution.
-   - Network route interception enforcing anti-SSRF on all navigations.
-   - Download cancellation on `download` event.
-   - Viewport screenshot (1280x720) and full-page screenshot capture saved to `data/scans/screenshots/`.
-   - Rendered DOM tree serialization saved to `data/scans/dom/`.
-   - BeautifulSoup parsing extracting forms (actions, methods, external flags, password presence), input fields, scripts (inline/external), and meta tags.
-   - Both async (`scan()`) and synchronous (`scan_sync()`) interfaces.
-5. **Validation & Test Execution:**
-   - Authored `tests/test_anti_ssrf.py` (51 test cases) and `tests/test_scanner.py` (4 test cases).
-   - Executed full test suite: **55 passed in 2.92s**.
-   - Verified controlled live scan against `https://example.com` (duration: 1429.61 ms, screenshot and DOM verified on disk).
+2. **Hardened Anti-SSRF Module (`app/scanner/anti_ssrf.py`):**
+   - Scheme and authority sanitization (rejecting control characters, unescaped whitespace, multiple `@` delimiters).
+   - Port validation enforcing strict $1 \le \text{port} \le 65535$ and blocking administrative services.
+   - Parsing obfuscated IP literals (decimal dwords, hex literals, dotted octals).
+   - IPv4-mapped IPv6 literal inspection (`[::ffff:127.0.0.1]`).
+   - Socket `getaddrinfo` resolution inspecting all returned IPv4/IPv6 addresses; rejects mixed public/private answers.
+   - Comprehensive subnet blacklisting: RFC 1918, RFC 4193, loopback, link-local, cloud metadata (`169.254.169.254`), CGNAT (`100.64.0.0/10`), broadcast, and reserved addresses.
+3. **Validating Egress Forward Proxy (`app/scanner/proxy.py`):**
+   - Intercepts all outbound HTTP and HTTPS CONNECT requests from Chromium.
+   - Revalidates destination against Anti-SSRF policies at the network layer.
+   - Binds outbound TCP sockets strictly to the validated `pinned_ip`, completely defeating DNS rebinding.
+   - Preserves TLS Server Name Indication (SNI) and Host headers end-to-end.
+4. **Hardened Playwright Scanner (`app/scanner/playwright_scanner.py`):**
+   - Removed insecure `--no-sandbox` flags from standard Windows execution.
+   - Configured `service_workers="block"` to eliminate route interception bypasses.
+   - Integrated popup containment listener closing unsolicited popups automatically.
+   - Switched to secure default TLS certificate verification (`ignore_https_errors=False`), capturing handshake failures as structured `CERT_ERROR` evidence.
+   - Context-level request routing (`context.route("**/*")`) re-validating all subresources and redirects.
+   - Ensured reliable `try/finally` cleanup of pages, contexts, browsers, and proxy server sockets.
+5. **Testing & Validation:**
+   - 72 unit tests in `tests/test_anti_ssrf.py` covering all edge cases.
+   - 13 scanner tests in `tests/test_scanner.py` covering proxy blocking, DOM parsing, TLS failure capture, exception cleanup, and live scan.
+   - All 84 unit tests pass in 0.68s; 1 live integration test passes against `https://example.com`.
 
 ---
 
@@ -94,17 +98,17 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
    The project is officially and permanently a **Python + React** project. Legacy C/C++/Java implementation requirements, along with CMake/Make/Maven/Gradle build systems, are intentionally excluded requirements. All mathematical and ML objectives are fully preserved and executed in pure Python/NumPy/PyTorch.
 2. **Virtual Environment Filesystem Location (ADR-007):**  
    The Python venv is located at `C:\Users\hp\PycharmProjects\blansole_footscan\.venv`. Terminal tools executing Python within this environment require either direct execution via the full binary path or `BypassSandbox: true` if cross-directory permissions are enforced.
-3. **Security Limitations of Local Testing Environment:**  
-   The Anti-SSRF module provides application-level DNS resolution inspection and route blocking. While highly effective, true OS/kernel-level network namespace isolation requires Docker containerization with `--cap-drop=ALL` and iptables egress filtering, which is designed for containerized production deployment.
+3. **Environment Security Boundaries:**  
+   The scanner enforces connection-level IP safety via the `ValidatingEgressProxy` and context-level routing. While this provides application and network-layer anti-SSRF and DNS rebinding immunity, true OS-level process and kernel isolation requires containerized deployment (e.g., Docker container with network namespaces and non-root execution), which will be packaged for production.
 
 ---
 
 ## 6. Last Verified Tests & Checks
 
 - **Date:** 2026-11-22
-- **Command:** `& "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m pytest tests/`
-- **Result:** `55 passed in 2.92s` (Exit Code 0). All Anti-SSRF rules, DOM parsers, and live navigation checks verified.
-- **Live Scan Check:** `https://example.com` completed in 1429.61 ms; status `COMPLETED`, HTTP 200, viewport and full-page PNG screenshots and DOM snapshot verified on disk.
+- **Command:** `& "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m pytest -v tests/`
+- **Result:** `85 passed in 3.00s` (Exit Code 0). All Anti-SSRF rules, proxy IP pinning, TLS error handling, and live navigation checks verified.
+- **Offline Suite:** `84 passed in 0.68s` with `pytest -m "not integration"`.
 
 ---
 
