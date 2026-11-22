@@ -28,7 +28,28 @@ Visual intelligence forms the central empirical contribution of PhishVision AI. 
 
 ---
 
-## 2. Core Visual Intelligence Suite: In-Depth Specifications
+## 2. Model Specifications & Operational Architectures
+
+### 2.0 M-01: URL Lexical Multi-Layer Perceptron (Fast-Path Tier)
+- **Role:** Fast-path lexical URL and domain verification. Operates in real-time ($<2$ ms) before browser launch to preemptively flag blatant phishing domains or provide calibrated prior probabilities for multimodal risk fusion.
+- **Architecture:** 3-Layer Dense Perceptron trained from scratch:
+  - Input Layer: 40 engineered lexical, structural, and brand-impersonation features.
+  - Hidden Layer 1: `Dense(40, 64)` $\to$ `ReLU` (He normal initialization).
+  - Hidden Layer 2: `Dense(64, 32)` $\to$ `ReLU` (He normal initialization).
+  - Output Layer: `Dense(32, 1)` $\to$ `Sigmoid` (Xavier initialization).
+- **Optimization & Schedulers:** Custom `Adam` ($\beta_1=0.9, \beta_2=0.999$) with `CosineAnnealingLR` from scratch; cost-sensitive class-weighted BCE ($w_0 = 36.962, w_1 = 0.507$) under natural distribution mini-batching (Strategy B) with best-validation-checkpoint restoration.
+- **Integrated Domain Intelligence:**
+  - PSL multi-label domain parsing (`app/intelligence/url_domain/psl_extractor.py`).
+  - Unicode mixed-script and confusable homoglyph analysis (`app/intelligence/url_domain/homoglyph.py`).
+  - Typosquatting, combosquatting, and subdomain spoofing detection (`app/intelligence/url_domain/typosquatting.py`).
+- **Holdout Evaluation Metrics (Unseen Test Partition, 4,257 samples across 908 unseen domains):**
+  - **ROC-AUC:** 0.9773
+  - **PR-AUC:** 0.9995
+  - **Macro F1:** 0.8239
+  - **Accuracy:** 98.66%
+  - **Phishing (Class 1):** Precision 0.9933, Recall 0.9931, F1 0.9932
+  - **Legitimate (Class 0):** Precision 0.6506, Recall 0.6585, F1 0.6545
+- **Artifacts:** `models/lexical/model_weights.npz`, `models/lexical/preprocessor.json`, `models/lexical/feature_names.json`.
 
 ### 2.1 M-02: ResNet Screenshot Classifier (Visual Module 1)
 - **Role:** Independent global layout classification. Operates unconditionally on any rendered webpage screenshot without requiring prior knowledge or reference images of the target domain.
