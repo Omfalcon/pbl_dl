@@ -1,0 +1,36 @@
+# Siamese ResNet-18 Brand Matcher (M-03) Training Configuration
+# PhishVision AI - Phase 6.2
+
+model:
+  model_id: "M-03"
+  architecture: "SiameseResNet18"
+  backbone: "resnet18"
+  pretrained: true                   # Use ImageNet initialization for convolutional stem
+  embedding_dim: 256                 # 256-dimensional unit sphere embedding
+  dropout_p: 0.2
+
+data:
+  pairs_manifest: "data/brands/manifest_siamese_pairs.csv"
+  splits_dir: "data/splits/siamese"
+  gallery_dir: "data/brands/reference_gallery"
+  repo_root: "."
+  image_size: 128                    # 128x128 spatial resolution for logo & UI crops
+  num_workers: 0                     # Set to 0 on Windows for reliable DataLoader execution
+  pin_memory: true
+
+training:
+  random_seed: 42
+  batch_size: 32
+  epochs: 25
+  learning_rate: 0.0001              # 1e-4 suitable for fine-tuning Siamese ResNet-18
+  weight_decay: 0.0001
+  loss_type: "contrastive"           # "contrastive" (distance-based) or "cosine"
+  margin: 1.0                        # Contrastive margin
+  similarity_threshold: 0.82         # Decision threshold for positive brand identification
+  early_stopping_patience: 6
+  device: "cuda"                     # "cuda" falls back to "cpu" if unavailable
+
+paths:
+  checkpoint_dir: "models/checkpoints/siamese"
+  report_dir: "data/reports/siamese"
+  evaluation_report: "data/reports/siamese/siamese_evaluation.json"

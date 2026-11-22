@@ -8,7 +8,7 @@
       "brand_id": "sbi",
       "display_name": "State Bank of India",
       "category": "Banking & Financial Services",
-      "official_registrable_domains": ["sbi.co.in", "onlinesbi.sbi", "onlinesbi.com"],
+      "official_registrable_domains": ["sbi.co.in", "onlinesbi.sbi", "onlinesbi.com", "sbi.bank.in"],
       "authorized_subdomains": ["retail.onlinesbi.sbi", "corporate.onlinesbi.sbi", "retail.onlinesbi.com"],
       "synonyms": ["sbi", "state bank of india", "onlinesbi", "yono"],
       "assets": {
@@ -21,7 +21,7 @@
       "brand_id": "hdfc",
       "display_name": "HDFC Bank",
       "category": "Banking & Financial Services",
-      "official_registrable_domains": ["hdfcbank.com"],
+      "official_registrable_domains": ["hdfcbank.com", "hdfc.bank.in"],
       "authorized_subdomains": ["netbanking.hdfcbank.com", "www.hdfcbank.com"],
       "synonyms": ["hdfc", "hdfc bank", "hdfc netbanking"],
       "assets": {

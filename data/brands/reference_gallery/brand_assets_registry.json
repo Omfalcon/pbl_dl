@@ -1,0 +1,753 @@
+{
+  "google": [
+    {
+      "asset_id": "google_canonical_d2ac45a6",
+      "brand_id": "google",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/google/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://accounts.google.com/v3/signin/identifier?continue=https://accounts.google.com/&followup=https://accounts.google.com/&passive=1209600&flowName=GlifWebSignIn&flowEntry=ServiceLogin&dsh=S-1726724988:1795360424490815",
+      "capture_date": "2026-11-22T15:13:47.199350+00:00",
+      "sha256": "d2ac45a64b2675966c7ed78a0b4a7bcbe68916b37786b22431adff0466cc75a9",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "google_logo_direct_26208425",
+      "brand_id": "google",
+      "asset_type": "logo_primary",
+      "relative_path": "data/brands/reference_gallery/google/logos/logo_direct_0.png",
+      "source_url": "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png",
+      "capture_date": "2026-11-22T15:13:47.441159+00:00",
+      "sha256": "262084257c2103702ef8a25705e3f8dbc1fa3823103ad7b954d54bdb77e6d89d",
+      "width": 544,
+      "height": 184,
+      "channels": 3,
+      "notes": "Official brand direct logo asset (.png)"
+    },
+    {
+      "asset_id": "google_logo_direct_6da56208",
+      "brand_id": "google",
+      "asset_type": "logo_icon",
+      "relative_path": "data/brands/reference_gallery/google/logos/logo_direct_1.png",
+      "source_url": "https://www.google.com/favicon.ico",
+      "capture_date": "2026-11-22T15:13:47.548701+00:00",
+      "sha256": "6da5620880159634213e197fafca1dde0272153be3e4590818533fab8d040770",
+      "width": 32,
+      "height": 32,
+      "channels": 3,
+      "notes": "Official brand direct logo asset (.png)"
+    },
+    {
+      "asset_id": "google_canonical_d2ac45a6",
+      "brand_id": "google",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/google/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://accounts.google.com/v3/signin/identifier?continue=https://accounts.google.com/&followup=https://accounts.google.com/&passive=1209600&flowName=GlifWebSignIn&flowEntry=ServiceLogin&dsh=S1897184721:1795360620465901",
+      "capture_date": "2026-11-22T15:17:03.471826+00:00",
+      "sha256": "d2ac45a64b2675966c7ed78a0b4a7bcbe68916b37786b22431adff0466cc75a9",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "google_logo_direct_26208425",
+      "brand_id": "google",
+      "asset_type": "logo_primary",
+      "relative_path": "data/brands/reference_gallery/google/logos/logo_direct_0.png",
+      "source_url": "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png",
+      "capture_date": "2026-11-22T15:17:03.686226+00:00",
+      "sha256": "262084257c2103702ef8a25705e3f8dbc1fa3823103ad7b954d54bdb77e6d89d",
+      "width": 544,
+      "height": 184,
+      "channels": 3,
+      "notes": "Official brand direct logo asset (.png)"
+    },
+    {
+      "asset_id": "google_logo_direct_6da56208",
+      "brand_id": "google",
+      "asset_type": "logo_icon",
+      "relative_path": "data/brands/reference_gallery/google/logos/logo_direct_1.png",
+      "source_url": "https://www.google.com/favicon.ico",
+      "capture_date": "2026-11-22T15:17:03.814163+00:00",
+      "sha256": "6da5620880159634213e197fafca1dde0272153be3e4590818533fab8d040770",
+      "width": 32,
+      "height": 32,
+      "channels": 3,
+      "notes": "Official brand direct logo asset (.png)"
+    }
+  ],
+  "microsoft": [
+    {
+      "asset_id": "microsoft_canonical_698217a4",
+      "brand_id": "microsoft",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/microsoft/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://login.live.com/",
+      "capture_date": "2026-11-22T15:13:52.353208+00:00",
+      "sha256": "698217a4f3708a6a3b8585117eeaa0dfe8529298dc3e8ab196a4406c0341fce5",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "microsoft_canonical_698217a4",
+      "brand_id": "microsoft",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/microsoft/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://login.live.com/",
+      "capture_date": "2026-11-22T15:17:08.057608+00:00",
+      "sha256": "698217a4f3708a6a3b8585117eeaa0dfe8529298dc3e8ab196a4406c0341fce5",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    }
+  ],
+  "paypal": [
+    {
+      "asset_id": "paypal_logo_direct_9cfeb9e9",
+      "brand_id": "paypal",
+      "asset_type": "logo_primary",
+      "relative_path": "data/brands/reference_gallery/paypal/logos/logo_direct_0.png",
+      "source_url": "https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg",
+      "capture_date": "2026-11-22T15:13:54.228027+00:00",
+      "sha256": "9cfeb9e93032bb1a9c9b086947e4068d2300601459fa700f0f3f72393f001148",
+      "width": 226,
+      "height": 142,
+      "channels": 3,
+      "notes": "Official brand direct logo asset (.png)"
+    },
+    {
+      "asset_id": "paypal_logo_direct_f2d19611",
+      "brand_id": "paypal",
+      "asset_type": "logo_primary",
+      "relative_path": "data/brands/reference_gallery/paypal/logos/logo_direct_0.png",
+      "source_url": "https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg",
+      "capture_date": "2026-11-22T15:17:09.793911+00:00",
+      "sha256": "f2d19611314571001eb2bcab2791647bcec7308aaafd4289f6afc47d40b49d54",
+      "width": 226,
+      "height": 142,
+      "channels": 3,
+      "notes": "Official brand direct logo asset (.png)"
+    }
+  ],
+  "apple": [
+    {
+      "asset_id": "apple_canonical_3adb6857",
+      "brand_id": "apple",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/apple/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://account.apple.com/",
+      "capture_date": "2026-11-22T15:13:59.708402+00:00",
+      "sha256": "3adb6857cde7d4ed15607cc400a94ff73ec3689d42617ca3c4be0220b482058d",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "apple_logo_direct_5493c61c",
+      "brand_id": "apple",
+      "asset_type": "logo_primary",
+      "relative_path": "data/brands/reference_gallery/apple/logos/logo_direct_0.png",
+      "source_url": "https://www.apple.com/favicon.ico",
+      "capture_date": "2026-11-22T15:13:59.953556+00:00",
+      "sha256": "5493c61cf725cf3a1d63cd9d07de75b0d6faa5564e772f7d0a6074f341442938",
+      "width": 64,
+      "height": 64,
+      "channels": 3,
+      "notes": "Official brand direct logo asset (.png)"
+    },
+    {
+      "asset_id": "apple_canonical_84e028d1",
+      "brand_id": "apple",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/apple/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://account.apple.com/",
+      "capture_date": "2026-11-22T15:17:15.479777+00:00",
+      "sha256": "84e028d1fe517a7d646796e2d1697e44381da7e73099c45f6b727190fea8efde",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "apple_logo_direct_5493c61c",
+      "brand_id": "apple",
+      "asset_type": "logo_primary",
+      "relative_path": "data/brands/reference_gallery/apple/logos/logo_direct_0.png",
+      "source_url": "https://www.apple.com/favicon.ico",
+      "capture_date": "2026-11-22T15:17:15.720560+00:00",
+      "sha256": "5493c61cf725cf3a1d63cd9d07de75b0d6faa5564e772f7d0a6074f341442938",
+      "width": 64,
+      "height": 64,
+      "channels": 3,
+      "notes": "Official brand direct logo asset (.png)"
+    }
+  ],
+  "amazon": [
+    {
+      "asset_id": "amazon_canonical_1cd07713",
+      "brand_id": "amazon",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/amazon/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://www.amazon.com/ap/signin",
+      "capture_date": "2026-11-22T15:14:03.623698+00:00",
+      "sha256": "1cd077130f5dae4a8e8628a6aced2cb0dcdd83dca3befcb062af58f575c024be",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "amazon_canonical_1cd07713",
+      "brand_id": "amazon",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/amazon/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://www.amazon.com/ap/signin",
+      "capture_date": "2026-11-22T15:17:19.263927+00:00",
+      "sha256": "1cd077130f5dae4a8e8628a6aced2cb0dcdd83dca3befcb062af58f575c024be",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    }
+  ],
+  "chase": [
+    {
+      "asset_id": "chase_canonical_f8c22778",
+      "brand_id": "chase",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/chase/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://secure.chase.com/web/auth/dashboard",
+      "capture_date": "2026-11-22T15:14:08.448118+00:00",
+      "sha256": "f8c227785f3525b4898963ce1abb3017715dac5b4145fcb99e63947c3c9ae495",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "chase_logo_989fb592",
+      "brand_id": "chase",
+      "asset_type": "logo_rendered",
+      "relative_path": "data/brands/reference_gallery/chase/logos/logo_rendered.png",
+      "source_url": "https://secure.chase.com/web/auth/dashboard",
+      "capture_date": "2026-11-22T15:14:08.579586+00:00",
+      "sha256": "989fb59264270a9a20cf5ce4a583ff1874e0952e572e64977a3c3ccab53d2915",
+      "width": 126,
+      "height": 25,
+      "channels": 3,
+      "notes": "Rendered page element screenshot (img[alt*='Chase'])"
+    },
+    {
+      "asset_id": "chase_canonical_f8c22778",
+      "brand_id": "chase",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/chase/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://secure.chase.com/web/auth/dashboard",
+      "capture_date": "2026-11-22T15:17:23.536347+00:00",
+      "sha256": "f8c227785f3525b4898963ce1abb3017715dac5b4145fcb99e63947c3c9ae495",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "chase_logo_989fb592",
+      "brand_id": "chase",
+      "asset_type": "logo_rendered",
+      "relative_path": "data/brands/reference_gallery/chase/logos/logo_rendered.png",
+      "source_url": "https://secure.chase.com/web/auth/dashboard",
+      "capture_date": "2026-11-22T15:17:23.632334+00:00",
+      "sha256": "989fb59264270a9a20cf5ce4a583ff1874e0952e572e64977a3c3ccab53d2915",
+      "width": 126,
+      "height": 25,
+      "channels": 3,
+      "notes": "Rendered page element screenshot (img[alt*='Chase'])"
+    }
+  ],
+  "wellsfargo": [
+    {
+      "asset_id": "wellsfargo_canonical_6bf4cf5e",
+      "brand_id": "wellsfargo",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/wellsfargo/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://connect.secure.wellsfargo.com/auth/login/present",
+      "capture_date": "2026-11-22T15:14:18.614066+00:00",
+      "sha256": "6bf4cf5e194c7cf729e0306a1e085b27cd5e8d13942533ca166a3eb95fc493ea",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "wellsfargo_logo_direct_60088561",
+      "brand_id": "wellsfargo",
+      "asset_type": "logo_primary",
+      "relative_path": "data/brands/reference_gallery/wellsfargo/logos/logo_direct_0.png",
+      "source_url": "https://www17.wellsfargomedia.com/assets/images/rwd/wf_logo_220x23.png",
+      "capture_date": "2026-11-22T15:14:18.947683+00:00",
+      "sha256": "60088561eb43fca42fc2f9c996af43347355642872eabfa97a943d2f28ee474d",
+      "width": 220,
+      "height": 23,
+      "channels": 3,
+      "notes": "Official brand direct logo asset (.png)"
+    },
+    {
+      "asset_id": "wellsfargo_canonical_6bf4cf5e",
+      "brand_id": "wellsfargo",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/wellsfargo/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://connect.secure.wellsfargo.com/auth/login/present",
+      "capture_date": "2026-11-22T15:17:31.923861+00:00",
+      "sha256": "6bf4cf5e194c7cf729e0306a1e085b27cd5e8d13942533ca166a3eb95fc493ea",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "wellsfargo_logo_direct_60088561",
+      "brand_id": "wellsfargo",
+      "asset_type": "logo_primary",
+      "relative_path": "data/brands/reference_gallery/wellsfargo/logos/logo_direct_0.png",
+      "source_url": "https://www17.wellsfargomedia.com/assets/images/rwd/wf_logo_220x23.png",
+      "capture_date": "2026-11-22T15:17:32.086251+00:00",
+      "sha256": "60088561eb43fca42fc2f9c996af43347355642872eabfa97a943d2f28ee474d",
+      "width": 220,
+      "height": 23,
+      "channels": 3,
+      "notes": "Official brand direct logo asset (.png)"
+    }
+  ],
+  "netflix": [
+    {
+      "asset_id": "netflix_canonical_722a64f2",
+      "brand_id": "netflix",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/netflix/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://www.netflix.com/in/login",
+      "capture_date": "2026-11-22T15:14:26.203616+00:00",
+      "sha256": "722a64f2886415f8602e9fb005bf844a635149c6ffe7aac0fb5134ac4a7d360e",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "netflix_canonical_6a7ad1d6",
+      "brand_id": "netflix",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/netflix/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://www.netflix.com/in/login",
+      "capture_date": "2026-11-22T15:17:39.153376+00:00",
+      "sha256": "6a7ad1d6dada14da491afad8484ae78426c1a2262caed175b8341a1fcb1ef6ba",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    }
+  ],
+  "facebook": [
+    {
+      "asset_id": "facebook_canonical_a243baa2",
+      "brand_id": "facebook",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/facebook/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://www.facebook.com/login/",
+      "capture_date": "2026-11-22T15:14:31.249936+00:00",
+      "sha256": "a243baa2448dc76095af3d530d34653c4795eaa0eaea6bbef5c75fa5664968af",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "facebook_logo_0bc530df",
+      "brand_id": "facebook",
+      "asset_type": "logo_rendered",
+      "relative_path": "data/brands/reference_gallery/facebook/logos/logo_rendered.png",
+      "source_url": "https://www.facebook.com/login/",
+      "capture_date": "2026-11-22T15:14:31.361011+00:00",
+      "sha256": "0bc530df04aa3d525a94aa856de3e1b56f706638b171c611499b6ce17c5b8e97",
+      "width": 72,
+      "height": 72,
+      "channels": 3,
+      "notes": "Rendered page element screenshot (svg)"
+    },
+    {
+      "asset_id": "facebook_logo_direct_9d19db35",
+      "brand_id": "facebook",
+      "asset_type": "logo_primary",
+      "relative_path": "data/brands/reference_gallery/facebook/logos/logo_direct_0.png",
+      "source_url": "https://static.xx.fbcdn.net/rsrc.php/y1/r/4lCu2zih0ca.svg",
+      "capture_date": "2026-11-22T15:14:31.510301+00:00",
+      "sha256": "9d19db3535b9e8c94456246e7b832fd2999916f161fe37b938fa4c086e1e54c5",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official brand direct logo asset (.svg)"
+    },
+    {
+      "asset_id": "facebook_canonical_a243baa2",
+      "brand_id": "facebook",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/facebook/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://www.facebook.com/login/",
+      "capture_date": "2026-11-22T15:17:44.274523+00:00",
+      "sha256": "a243baa2448dc76095af3d530d34653c4795eaa0eaea6bbef5c75fa5664968af",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "facebook_logo_0bc530df",
+      "brand_id": "facebook",
+      "asset_type": "logo_rendered",
+      "relative_path": "data/brands/reference_gallery/facebook/logos/logo_rendered.png",
+      "source_url": "https://www.facebook.com/login/",
+      "capture_date": "2026-11-22T15:17:44.382678+00:00",
+      "sha256": "0bc530df04aa3d525a94aa856de3e1b56f706638b171c611499b6ce17c5b8e97",
+      "width": 72,
+      "height": 72,
+      "channels": 3,
+      "notes": "Rendered page element screenshot (svg)"
+    },
+    {
+      "asset_id": "facebook_logo_direct_9d19db35",
+      "brand_id": "facebook",
+      "asset_type": "logo_primary",
+      "relative_path": "data/brands/reference_gallery/facebook/logos/logo_direct_0.png",
+      "source_url": "https://static.xx.fbcdn.net/rsrc.php/y1/r/4lCu2zih0ca.svg",
+      "capture_date": "2026-11-22T15:17:44.554134+00:00",
+      "sha256": "9d19db3535b9e8c94456246e7b832fd2999916f161fe37b938fa4c086e1e54c5",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official brand direct logo asset (.svg)"
+    }
+  ],
+  "instagram": [
+    {
+      "asset_id": "instagram_canonical_969fc9e7",
+      "brand_id": "instagram",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/instagram/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://www.instagram.com/accounts/login/",
+      "capture_date": "2026-11-22T15:14:36.585991+00:00",
+      "sha256": "969fc9e7caa30b3988b3f1820c57c72fbbbcb366532cc01befa70ba3a4019e45",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "instagram_canonical_25264f22",
+      "brand_id": "instagram",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/instagram/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://www.instagram.com/accounts/login/",
+      "capture_date": "2026-11-22T15:17:48.617167+00:00",
+      "sha256": "25264f227329730bd0b1df1cd932e893ee7c238f39163e991e02d4e26083cf81",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    }
+  ],
+  "whatsapp": [
+    {
+      "asset_id": "whatsapp_canonical_64c9cfac",
+      "brand_id": "whatsapp",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/whatsapp/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://web.whatsapp.com/",
+      "capture_date": "2026-11-22T15:14:41.076893+00:00",
+      "sha256": "64c9cfac384a2c7d1cc995a658b2a00f273686435f3915a772228fce6afd287c",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "whatsapp_logo_501a83b2",
+      "brand_id": "whatsapp",
+      "asset_type": "logo_rendered",
+      "relative_path": "data/brands/reference_gallery/whatsapp/logos/logo_rendered.png",
+      "source_url": "https://web.whatsapp.com/",
+      "capture_date": "2026-11-22T15:14:41.193336+00:00",
+      "sha256": "501a83b2fedea5e8a79f6fab5a082d2a0247d88f4a4921786deab2b9d38fccb8",
+      "width": 31,
+      "height": 30,
+      "channels": 3,
+      "notes": "Rendered page element screenshot (svg)"
+    },
+    {
+      "asset_id": "whatsapp_canonical_4e78df47",
+      "brand_id": "whatsapp",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/whatsapp/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://web.whatsapp.com/",
+      "capture_date": "2026-11-22T15:17:52.876762+00:00",
+      "sha256": "4e78df47ba96bc80bb7df498bc8db68be99e7961bc52078567d40691b68d6244",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "whatsapp_logo_501a83b2",
+      "brand_id": "whatsapp",
+      "asset_type": "logo_rendered",
+      "relative_path": "data/brands/reference_gallery/whatsapp/logos/logo_rendered.png",
+      "source_url": "https://web.whatsapp.com/",
+      "capture_date": "2026-11-22T15:17:53.064608+00:00",
+      "sha256": "501a83b2fedea5e8a79f6fab5a082d2a0247d88f4a4921786deab2b9d38fccb8",
+      "width": 31,
+      "height": 30,
+      "channels": 3,
+      "notes": "Rendered page element screenshot (svg)"
+    }
+  ],
+  "linkedin": [
+    {
+      "asset_id": "linkedin_canonical_a91a9e35",
+      "brand_id": "linkedin",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/linkedin/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://www.linkedin.com/login",
+      "capture_date": "2026-11-22T15:14:45.809055+00:00",
+      "sha256": "a91a9e35e60858e09282d2c7883e5118fcfaec27399a8fdd3655733a469c15ff",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "linkedin_logo_direct_19b079c0",
+      "brand_id": "linkedin",
+      "asset_type": "logo_primary",
+      "relative_path": "data/brands/reference_gallery/linkedin/logos/logo_direct_0.png",
+      "source_url": "https://static.licdn.com/aero-v1/sc/h/al2o9zrvru7aqj8e1x2rzsrca",
+      "capture_date": "2026-11-22T15:14:45.905269+00:00",
+      "sha256": "19b079c09197fba68d021fa3ba394ec91703909ffd237efa3eb9a2bca13148ec",
+      "width": 64,
+      "height": 64,
+      "channels": 3,
+      "notes": "Official brand direct logo asset (.png)"
+    },
+    {
+      "asset_id": "linkedin_canonical_a91a9e35",
+      "brand_id": "linkedin",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/linkedin/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://www.linkedin.com/login",
+      "capture_date": "2026-11-22T15:17:57.888695+00:00",
+      "sha256": "a91a9e35e60858e09282d2c7883e5118fcfaec27399a8fdd3655733a469c15ff",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "linkedin_logo_direct_19b079c0",
+      "brand_id": "linkedin",
+      "asset_type": "logo_primary",
+      "relative_path": "data/brands/reference_gallery/linkedin/logos/logo_direct_0.png",
+      "source_url": "https://static.licdn.com/aero-v1/sc/h/al2o9zrvru7aqj8e1x2rzsrca",
+      "capture_date": "2026-11-22T15:17:57.976444+00:00",
+      "sha256": "19b079c09197fba68d021fa3ba394ec91703909ffd237efa3eb9a2bca13148ec",
+      "width": 64,
+      "height": 64,
+      "channels": 3,
+      "notes": "Official brand direct logo asset (.png)"
+    }
+  ],
+  "adobe": [
+    {
+      "asset_id": "adobe_canonical_728af9b6",
+      "brand_id": "adobe",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/adobe/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://account.adobe.com/",
+      "capture_date": "2026-11-22T15:14:49.510810+00:00",
+      "sha256": "728af9b647254cec468d759c010030770924158dca41532675e575b4c021fec0",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "adobe_canonical_728af9b6",
+      "brand_id": "adobe",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/adobe/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://account.adobe.com/",
+      "capture_date": "2026-11-22T15:18:02.041114+00:00",
+      "sha256": "728af9b647254cec468d759c010030770924158dca41532675e575b4c021fec0",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    }
+  ],
+  "fedex": [
+    {
+      "asset_id": "fedex_canonical_1382a37a",
+      "brand_id": "fedex",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/fedex/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://www.fedex.com/",
+      "capture_date": "2026-11-22T15:14:54.756490+00:00",
+      "sha256": "1382a37a737abd18f18393f62c032ee480a840aa733253c49ef2559e8a73dd50",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "fedex_logo_66027c57",
+      "brand_id": "fedex",
+      "asset_type": "logo_rendered",
+      "relative_path": "data/brands/reference_gallery/fedex/logos/logo_rendered.png",
+      "source_url": "https://www.fedex.com/",
+      "capture_date": "2026-11-22T15:14:54.842784+00:00",
+      "sha256": "66027c57b01c7486dbc4c0732f89ea1b0d7ea2e1f1a260862575fb2807138b2c",
+      "width": 273,
+      "height": 132,
+      "channels": 3,
+      "notes": "Rendered page element screenshot (img[alt*='FedEx'])"
+    },
+    {
+      "asset_id": "fedex_canonical_82fc4b3e",
+      "brand_id": "fedex",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/fedex/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://www.fedex.com/",
+      "capture_date": "2026-11-22T15:18:11.781654+00:00",
+      "sha256": "82fc4b3ed9188c42bcfc81ce103824ad8ce8eb187ee96dd439a3d93cc2fffdaa",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "fedex_logo_66027c57",
+      "brand_id": "fedex",
+      "asset_type": "logo_rendered",
+      "relative_path": "data/brands/reference_gallery/fedex/logos/logo_rendered.png",
+      "source_url": "https://www.fedex.com/",
+      "capture_date": "2026-11-22T15:18:11.901628+00:00",
+      "sha256": "66027c57b01c7486dbc4c0732f89ea1b0d7ea2e1f1a260862575fb2807138b2c",
+      "width": 273,
+      "height": 132,
+      "channels": 3,
+      "notes": "Rendered page element screenshot (img[alt*='FedEx'])"
+    }
+  ],
+  "dhl": [
+    {
+      "asset_id": "dhl_canonical_1417a0e1",
+      "brand_id": "dhl",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/dhl/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://mydhl.express.dhl/index/en.html",
+      "capture_date": "2026-11-22T15:18:07.846386+00:00",
+      "sha256": "1417a0e1248005a210b723072150fd67c662b38ea792ad482b8a31aeaaa742aa",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "dhl_logo_a7ec3322",
+      "brand_id": "dhl",
+      "asset_type": "logo_rendered",
+      "relative_path": "data/brands/reference_gallery/dhl/logos/logo_rendered.png",
+      "source_url": "https://mydhl.express.dhl/index/en.html",
+      "capture_date": "2026-11-22T15:18:07.970201+00:00",
+      "sha256": "a7ec332287cfe7ce890b84f21f91a6c65940de2154ec57d7041a0d40d5d65f27",
+      "width": 214,
+      "height": 21,
+      "channels": 3,
+      "notes": "Rendered page element screenshot (img[alt*='DHL'])"
+    }
+  ],
+  "sbi": [
+    {
+      "asset_id": "sbi_canonical_bf2eae82",
+      "brand_id": "sbi",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/sbi/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://sbi.co.in/redirect/",
+      "capture_date": "2026-11-22T15:18:16.680284+00:00",
+      "sha256": "bf2eae825234a02a7630f81997018a8bfacaf0f930bc2a6430c5164d108489e9",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "sbi_logo_direct_9f2389af",
+      "brand_id": "sbi",
+      "asset_type": "logo_primary",
+      "relative_path": "data/brands/reference_gallery/sbi/logos/logo_direct_0.png",
+      "source_url": "https://sbi.co.in/favicon.ico",
+      "capture_date": "2026-11-22T15:18:18.109033+00:00",
+      "sha256": "9f2389af436d7be66a1c7ee19eed648888258b908adbef81b89871b66b028fcc",
+      "width": 16,
+      "height": 16,
+      "channels": 3,
+      "notes": "Official brand direct logo asset (.png)"
+    }
+  ],
+  "hdfc": [
+    {
+      "asset_id": "hdfc_canonical_825a1176",
+      "brand_id": "hdfc",
+      "asset_type": "canonical_screenshot",
+      "relative_path": "data/brands/reference_gallery/hdfc/canonical_screenshots/canonical_desktop.png",
+      "source_url": "https://www.hdfc.bank.in/",
+      "capture_date": "2026-11-22T15:18:21.908803+00:00",
+      "sha256": "825a1176e41cc3ac1758e69d9512ba24ad2e41d5a50a3cb650240e7450e01eba",
+      "width": 1280,
+      "height": 800,
+      "channels": 3,
+      "notes": "Official Playwright Chromium desktop capture (1280x800)"
+    },
+    {
+      "asset_id": "hdfc_logo_18946835",
+      "brand_id": "hdfc",
+      "asset_type": "logo_rendered",
+      "relative_path": "data/brands/reference_gallery/hdfc/logos/logo_rendered.png",
+      "source_url": "https://www.hdfc.bank.in/",
+      "capture_date": "2026-11-22T15:18:22.035354+00:00",
+      "sha256": "189468356555353ad85d43de761f6c63b876d5d95fd24efe55a1da815e58d7be",
+      "width": 143,
+      "height": 28,
+      "channels": 3,
+      "notes": "Rendered page element screenshot (img[alt*='HDFC'])"
+    }
+  ],
+  "bofa": [
+    {
+      "asset_id": "bofa_logo_0e58359d",
+      "brand_id": "bofa",
+      "asset_type": "logo_icon",
+      "relative_path": "data/brands/reference_gallery/bofa/logos/logo_icon.png",
+      "source_url": "https://www.bankofamerica.com/favicon.ico",
+      "capture_date": "2026-11-22T15:18:50.176593+00:00",
+      "sha256": "0e58359d793fedf4e114987442ae299c541ed8791c6b969c6c8a52b6823108ae",
+      "width": 16,
+      "height": 16,
+      "channels": 3,
+      "notes": "Official Bank of America favicon from bankofamerica.com (403 on full page due to Akamai WAF)"
+    }
+  ]
+}

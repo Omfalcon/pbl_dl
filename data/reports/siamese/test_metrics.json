@@ -1,0 +1,126 @@
+{
+  "model_id": "M-03",
+  "architecture": "SiameseResNet18",
+  "checkpoint_evaluated": "models/checkpoints/siamese/best_siamese.pt",
+  "checkpoint_epoch": 1,
+  "evaluation_timestamp": "2026-11-22T16:02:35.633761+00:00",
+  "decision_threshold": 0.82,
+  "dataset_split": "test",
+  "total_test_pairs": 20,
+  "positive_pairs": 8,
+  "negative_pairs": 12,
+  "classification_metrics": {
+    "accuracy": 0.85,
+    "precision": 1.0,
+    "recall": 0.625,
+    "f1_score": 0.7692,
+    "roc_auc": 0.875,
+    "pr_auc": 0.8629
+  },
+  "confusion_matrix": {
+    "true_negative": 12,
+    "false_positive": 0,
+    "false_negative": 3,
+    "true_positive": 5,
+    "matrix": [
+      [
+        12,
+        0
+      ],
+      [
+        3,
+        5
+      ]
+    ]
+  },
+  "validation_metrics_at_best_epoch": {
+    "accuracy": 0.8696,
+    "roc_auc": 0.8095,
+    "pr_auc": 0.8433,
+    "precision": 1.0,
+    "recall": 0.6667,
+    "f1": 0.8,
+    "threshold_applied": 0.82,
+    "total_pairs": 23,
+    "positive_pairs": 9,
+    "negative_pairs": 14,
+    "confusion_matrix": {
+      "true_negative": 14,
+      "false_positive": 0,
+      "false_negative": 3,
+      "true_positive": 6,
+      "raw": [
+        [
+          14,
+          0
+        ],
+        [
+          3,
+          6
+        ]
+      ]
+    },
+    "loss": 0.0553
+  },
+  "final_epoch_comparison": {
+    "epoch": 7,
+    "val_metrics": {
+      "accuracy": 0.4783,
+      "roc_auc": 0.754,
+      "pr_auc": 0.8168,
+      "precision": 0.4211,
+      "recall": 0.8889,
+      "f1": 0.5714,
+      "threshold_applied": 0.82,
+      "total_pairs": 23,
+      "positive_pairs": 9,
+      "negative_pairs": 14,
+      "confusion_matrix": {
+        "true_negative": 3,
+        "false_positive": 11,
+        "false_negative": 1,
+        "true_positive": 8,
+        "raw": [
+          [
+            3,
+            11
+          ],
+          [
+            1,
+            8
+          ]
+        ]
+      },
+      "loss": 0.0835
+    }
+  },
+  "brand_breakdown": {
+    "amazon": {
+      "total_pairs": 11,
+      "positive_pairs": 1,
+      "negative_pairs": 10,
+      "correct_predictions": 11,
+      "accuracy": 1.0,
+      "mean_pos_similarity": 1.0,
+      "mean_neg_similarity": 0.4897
+    },
+    "google": {
+      "total_pairs": 10,
+      "positive_pairs": 6,
+      "negative_pairs": 4,
+      "correct_predictions": 7,
+      "accuracy": 0.7,
+      "mean_pos_similarity": 0.7526,
+      "mean_neg_similarity": 0.6016
+    },
+    "netflix": {
+      "total_pairs": 11,
+      "positive_pairs": 1,
+      "negative_pairs": 10,
+      "correct_predictions": 11,
+      "accuracy": 1.0,
+      "mean_pos_similarity": 1.0,
+      "mean_neg_similarity": 0.4751
+    }
+  }
+}
