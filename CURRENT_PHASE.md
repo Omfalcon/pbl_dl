@@ -1,12 +1,13 @@
 # CURRENT_PHASE.md — Active Phase Status
 
 **Active Phase:** Phase 4 — Feedforward Deep Neural Network for Lexical Phishing Detection  
-**Phase Status:** IN PROGRESS (Optimizers from Scratch & Convergence Benchmarking Completed)  
+**Phase Status:** COMPLETED  
 **Previous Phases:**
 - Phase 0: Project Blueprint, Requirements & Architecture (COMPLETED)
 - Phase 1 & 1.1: Scanner Implementation & Security Hardening (COMPLETED)
 - Phase 2: Dataset Acquisition & Validation (COMPLETED & COMMITTED in `56d8565`)
 - Phase 3: Neural Network Mathematical Foundations (COMPLETED & DOCUMENTED in [`docs/PHASE_3_MATH_FOUNDATIONS.md`](docs/PHASE_3_MATH_FOUNDATIONS.md))  
+**Target Next Phase:** Phase 5 — Advanced Homoglyph & Typosquatting Analysis / Fast-Path Deployment  
 **Timestamp:** 2026-11-22  
 
 ---
@@ -26,20 +27,23 @@
 
 ---
 
-## 2. Phase 4 Remaining Deliverables
+## 2. Phase 4 Lexical Pipeline & MLP Deliverables
 
-- [ ] **Lexical URL Feature Extractor:** Extract 30+ engineered domain, path, query, entropy, and character-level statistical features.
-- [ ] **Standardization & Preprocessing:** Fit robust scaler / min-max normalization on domain-isolated training splits with zero validation/test leakage.
-- [ ] **Feedforward MLP Classifier:** Multi-layer perceptron architecture trained using custom from-scratch optimizers and schedulers.
-- [ ] **Evaluation Metrics:** Empirical classification metrics (Accuracy, Precision, Recall, F1, ROC-AUC) on domain-aware holdout test splits.
+| Deliverable | Specification | Implementation File | Verification & Holdout Results | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **Lexical Feature Extractor** | 40 engineered numerical features (lengths, tokens, counts, Shannon entropy, brand impersonation flags, ratios) | [`app/intelligence/lexical.py`](app/intelligence/lexical.py) | Verified across normal, IP-based, punycode, unicode, and malformed URLs. Fast vectorized extraction (32k URLs in ~1s). | PASSED |
+| **Standardization Preprocessor** | Zero-leakage standardization with outlier clipping | [`app/intelligence/preprocessing.py`](app/intelligence/preprocessing.py) | Fitted strictly on `X_train`. Zero leakage verified on validation and test holdout splits. Saved to `models/lexical/preprocessor.json`. | PASSED |
+| **Weighted BCE Loss** | Cost-sensitive loss balancing extreme class imbalance (1:73) | [`app/ml/from_scratch/losses.py`](app/ml/from_scratch/losses.py) | $w_0 = 36.962, w_1 = 0.507$. Validated analytical gradients and backward propagation. | PASSED |
+| **Lexical MLP (M-01)** | 3-Layer Perceptron: `Dense(40,64) -> ReLU -> Dense(64,32) -> ReLU -> Dense(32,1) -> Sigmoid` | [`app/intelligence/lexical_model.py`](app/intelligence/lexical_model.py) | Trained using custom `Adam` + `CosineAnnealingLR` from scratch. Weights saved to `models/lexical/model_weights.npz`. | PASSED |
+| **Holdout Evaluation** | Unseen domain-isolated test partition (4,257 records across 908 unseen domains) | [`scripts/train_lexical_model.py`](scripts/train_lexical_model.py) | **ROC-AUC: 0.9712**, **PR-AUC: 0.9993**, **Macro F1: 0.7421**, Phishing F1: 0.9843, Legit Recall: 79.27% (65/82). | PASSED |
 
 ---
 
 ## 3. Phase 4 Exit Criteria & Quality Rules
 
-- [x] **No PyTorch Optimizers:** All 4 optimizers and 3 schedulers built from scratch using NumPy.
-- [x] **Hardened Optimizer Safety:** Input length validation, tensor shape validation, gradient finiteness checks, and synchronized scheduler learning rates.
-- [x] **Hand-Calculated Precision:** Step updates verified against deterministic analytical proofs.
-- [x] **Empirical Convergence:** All optimizers achieve $\ge 95\%$ accuracy on synthetic classification.
-- [x] **Comprehensive Testing:** 20 optimizer unit tests passing; 167 total project unit tests passing in 6.39s (1 deselected).
+- [x] **No PyTorch Optimizers:** All 4 optimizers, 3 schedulers, and the MLP training pipeline built from scratch using NumPy.
+- [x] **Hardened Optimizer Safety:** Input length, tensor shape, parameter dtype/writability, gradient finiteness, and synchronized scheduler learning rates validated.
+- [x] **Strict Zero Leakage:** Preprocessor fitted on training split only; threshold calibrated on validation split only; final metrics measured on holdout test partition.
+- [x] **Robust Metrics Reported:** Full confusion matrix, per-class metrics, Macro Precision/Recall/F1, ROC-AUC, and PR-AUC reported (not just accuracy).
+- [x] **Comprehensive Testing:** 186 unit tests passing in 4.18s (1 deselected).
 - [x] **No Scope Bleed:** ResNet, YOLO, Siamese CNN, and Transformer models remain isolated for later phases.

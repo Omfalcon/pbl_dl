@@ -2,8 +2,8 @@
 
 **Project:** PhishVision AI (Phishing Website and Brand Impersonation Detector)  
 **Current Phase:** Phase 4 — Feedforward Deep Neural Network for Lexical Phishing Detection  
-**Phase Status:** IN PROGRESS (Optimizers and Schedulers Completed; Feature Extraction & MLP Remaining)  
-**Next Milestone:** Lexical Feature Extraction Pipeline & MLP Training  
+**Phase Status:** COMPLETED  
+**Next Milestone:** Phase 5 — Advanced Homoglyph & Typosquatting Analysis / Fast-Path Deployment  
 **Last Updated:** 2026-11-22  
 
 ---
@@ -15,7 +15,7 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
 - **Phase 0 (System Architecture & Requirements):** COMPLETED.
 - **Phase 1 & Phase 1.1 (Repository Foundation, Scanner Implementation & Security Hardening):** COMPLETED.
 - **Phase 2 (Dataset Acquisition, Preparation, Annotation & Validation):** COMPLETED (COMMITTED in `56d8565`).
-  - Ingested multi-source raw feeds: PhishTank, Tranco, PhreshPhish, OpenPhish, Zenodo brands, and External Visual Dataset (1,000 screenshots).
+  - Ingested multi-source raw feeds: PhishTank, Tranco, PhreshPhish, OpenPhish, Zenodo brands, and External Visual Dataset (1,008 screenshots).
   - Ground-truth separation: **44,129 verified URL records** (43,535 Phishing, 594 Legitimate) in `corpus_normalized.parquet`; **50,000 unverified candidate domains** isolated in `tranco_candidate_pool.parquet`.
   - Visual Dataset: **1,008 total valid screenshots on disk** (804 Phishing, 204 Legitimate). Catalogued in `data/processed/screenshots/visual_corpus.parquet`.
   - Brand Reference Gallery established for 18 target brands.
@@ -33,25 +33,31 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
   - Dynamic reverse-mode automatic differentiation computational graph.
   - Central finite differences numerical gradient checker (asserting relative error $< 10^{-6}$).
   - Full mathematical documentation published in [`docs/PHASE_3_MATH_FOUNDATIONS.md`](docs/PHASE_3_MATH_FOUNDATIONS.md).
-- **Phase 4 (Feedforward Deep Neural Network for Lexical Phishing Detection):** IN PROGRESS.
-  - Implemented 4 custom optimizers from scratch: SGD, SGD with Momentum, RMSProp, and Adam (`app/ml/from_scratch/optimizers.py`).
-  - Implemented 3 learning rate schedulers: StepLR, ExponentialLR, and CosineAnnealingLR.
-  - Hardened with input length validation, shape checking, gradient finiteness checks, state consistency, and scheduler rate synchronization.
-  - Verified updates against hand-calculated analytical values and proven convergence on regression & classification.
-  - Optimizer convergence benchmark exported to `data/reports/optimizer_benchmark.json`.
-  - **Full test suite: 167 unit tests passing (1 deselected) in ~6.39s**. Zero regressions.
+- **Phase 4 (Feedforward Deep Neural Network for Lexical Phishing Detection):** COMPLETED.
+  - Custom optimizers from scratch: SGD, SGD with Momentum, RMSProp, and Adam (`app/ml/from_scratch/optimizers.py`).
+  - Learning rate schedulers: StepLR, ExponentialLR, and CosineAnnealingLR.
+  - Hardened with input length, tensor shape, parameter dtype/writability, gradient finiteness checks, state consistency, and scheduler rate synchronization.
+  - Reusable 40-feature lexical URL extractor (`app/intelligence/lexical.py`) covering lengths, counts, tokens, Shannon entropy, and brand impersonation cues.
+  - Zero-leakage standardization preprocessor fitted strictly on training data (`app/intelligence/preprocessing.py`, saved to `models/lexical/preprocessor.json`).
+  - Class-weighted Binary Cross-Entropy loss ($w_0 = 36.962, w_1 = 0.507$) and balanced stratified mini-batch training.
+  - 3-Layer Lexical MLP (M-01) trained from scratch with Adam and CosineAnnealingLR (`models/lexical/model_weights.npz`).
+  - Validation threshold calibrated at $\tau = 0.100$. Holdout test metrics on 4,257 unseen records across 908 unseen domains: **ROC-AUC: 0.9712, PR-AUC: 0.9993, Macro F1: 0.7421, Phishing F1: 0.9843, Legit Recall: 79.27% (65/82)**. Full report exported to `data/reports/lexical_mlp_evaluation.json`.
+  - **Full test suite: 186 unit tests passing (1 deselected) in ~4.18s**. Zero regressions.
 
 ---
 
 ## 2. Current State Snapshot
 
-- **Active Phase:** `Phase 4` (Feedforward Deep Neural Network for Lexical Phishing Detection)
-- **Target Next Step:** Lexical URL feature extraction pipeline & MLP model training
+- **Active Phase:** `Phase 5` (Advanced Homoglyph & Typosquatting Analysis / Fast-Path Deployment)
+- **Target Next Step:** Fast-path lexical API integration and homoglyph distance modeling
 - **Working Modules:**
   - `app.scanner.anti_ssrf`: Hardened URL parsing, port validation, DNS resolution, and IP classification.
   - `app.scanner.proxy`: Validating local egress forward proxy with connection-level IP pinning and TLS SNI preservation.
   - `app.scanner.playwright_scanner`: Isolated Playwright Chromium scanner with context-level routing, popup containment, service worker blocking, and secure TLS checking.
   - `app.scanner.models`: Pydantic structured scan telemetry schemas.
+  - `app.intelligence.lexical`: 40-feature lexical URL extractor with Shannon entropy and brand impersonation detection.
+  - `app.intelligence.preprocessing`: Zero-leakage feature standardizer with outlier clipping and serialization.
+  - `app.intelligence.lexical_model`: M-01 Lexical MLP classifier with model weights serialization and metrics evaluation.
   - `scripts.datasets.download_sources`: Modular streaming downloaders for OpenPhish, PhishTank, Tranco, Zenodo, and PhreshPhish.
   - `scripts.datasets.download_all`: Central CLI acquisition orchestrator.
   - `scripts.datasets.fetch_brand_references`: Brand gallery scaffolding and metadata management.
@@ -63,6 +69,15 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
   - `scripts.datasets.visualize_annotations`: Visual overlay renderer for bounding boxes and segmentation masks.
   - `scripts.datasets.generate_annotations`: Annotation manager and preview generator.
   - `scripts.datasets.generate_splits`: Domain-aware leakage-safe train/val/test partitioner.
+  - `scripts.datasets.dataset_statistics`: Comprehensive dataset profiler.
+  - `app.ml.from_scratch.primitives`: Mathematical primitives (dot product, matrix multiply, cosine similarity, vector norms).
+  - `app.ml.from_scratch.activations`: Activation functions and analytic derivatives (ReLU, Sigmoid, Tanh, Softmax).
+  - `app.ml.from_scratch.losses`: Loss functions and analytic gradients (MSE, class-weighted Binary Cross Entropy).
+  - `app.ml.from_scratch.neuron`: Single neuron forward and backward pass.
+  - `app.ml.from_scratch.layers`: Dense layer with weight/bias initialization, forward and backward propagation.
+  - `app.ml.from_scratch.computational_graph`: Reverse-mode automatic differentiation tape and DAG topological execution.
+  - `app.ml.from_scratch.gradient_check`: Finite-differences numerical gradient validation.
+  - `app.ml.from_scratch.optimizers`: SGD, SGDMomentum, RMSProp, Adam, StepLR, ExponentialLR, CosineAnnealingLR.
   - `scripts.datasets.dataset_statistics`: Comprehensive dataset profiler.
   - `app.ml.from_scratch.primitives`: Mathematical primitives (dot product, matrix multiply, cosine similarity, vector norms).
   - `app.ml.from_scratch.activations`: Activation functions and analytic derivatives (ReLU, Sigmoid, Tanh, Softmax).
@@ -143,5 +158,5 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
 ## 6. Last Verified Tests & Checks
 
 - **Date:** 2026-11-22
-- **Command:** `pytest -v -m "not integration"`
-- **Result:** `167 passed, 1 deselected in 6.39s` (Exit Code 0). All anti-SSRF, scanner models, dataset processing, neural network math foundations, parameter finiteness/dtype/writability checks, and custom optimizer edge cases verified.
+- **Command:** `pytest -q -m "not integration"`
+- **Result:** `186 passed, 1 deselected in 4.18s` (Exit Code 0). All anti-SSRF, scanner models, dataset processing, neural network math foundations, custom optimizers, lexical feature extractor, preprocessor, and M-01 Lexical MLP verified.
