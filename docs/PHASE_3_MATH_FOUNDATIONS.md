@@ -12,7 +12,7 @@
 
 Phase 3 establishes the rigorous mathematical core required for neural network reasoning, optimization, and gradient-based learning in PhishVision AI. Rather than treating deep learning frameworks as opaque black boxes, all linear algebra, layer affine transformations, activation functions, losses, reverse-mode chain rule propagation, and finite-difference gradient checking have been built manually from first principles.
 
-All implementations reside in [`app/ml/from_scratch/`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/ml/from_scratch/) and are backed by comprehensive unit tests in [`tests/test_nn_from_scratch.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/tests/test_nn_from_scratch.py).
+All implementations reside in [`app/ml/from_scratch/`](../app/ml/from_scratch/) and are backed by comprehensive unit tests in [`tests/test_nn_from_scratch.py`](../tests/test_nn_from_scratch.py).
 
 ---
 
@@ -22,26 +22,26 @@ All implementations reside in [`app/ml/from_scratch/`](file:///c:/Users/hp/Pycha
 For two vectors $\mathbf{u}, \mathbf{v} \in \mathbb{R}^n$:
 $$\mathbf{u} \cdot \mathbf{v} = \sum_{i=1}^n u_i v_i = \|\mathbf{u}\|_2 \|\mathbf{v}\|_2 \cos(\theta)$$
 - **Properties:** Commutative ($\mathbf{u} \cdot \mathbf{v} = \mathbf{v} \cdot \mathbf{u}$), distributive over vector addition.
-- **Implementation:** [`dot_product`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/ml/from_scratch/primitives.py).
+- **Implementation:** [`dot_product`](../app/ml/from_scratch/primitives.py).
 
 ### 2.2 Vector $L_p$ Norm
 The generalized vector norm quantifies vector magnitude:
 $$\|\mathbf{v}\|_p = \left( \sum_{i=1}^n |v_i|^p \right)^{1/p}$$
 - For $p=1$ (Manhattan / Taxi-cab): $\|\mathbf{v}\|_1 = \sum_{i=1}^n |v_i|$.
 - For $p=2$ (Euclidean norm): $\|\mathbf{v}\|_2 = \sqrt{\sum_{i=1}^n v_i^2}$.
-- **Implementation:** [`vector_norm`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/ml/from_scratch/primitives.py).
+- **Implementation:** [`vector_norm`](../app/ml/from_scratch/primitives.py).
 
 ### 2.3 Cosine Similarity
 Measures orientation independent of magnitude (crucial for visual embeddings in brand impersonation):
 $$\text{CosineSimilarity}(\mathbf{u}, \mathbf{v}) = \frac{\mathbf{u} \cdot \mathbf{v}}{\max(\|\mathbf{u}\|_2 \|\mathbf{v}\|_2, \epsilon)}$$
 - Range: $[-1.0, 1.0]$. For identical directional vectors, $S_C = 1.0$; for orthogonal vectors, $S_C = 0.0$.
-- **Implementation:** [`cosine_similarity`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/ml/from_scratch/primitives.py).
+- **Implementation:** [`cosine_similarity`](../app/ml/from_scratch/primitives.py).
 
 ### 2.4 Matrix Multiplication
 For $\mathbf{A} \in \mathbb{R}^{m \times k}$ and $\mathbf{B} \in \mathbb{R}^{k \times n}$:
 $$\mathbf{C} = \mathbf{A} \mathbf{B} \in \mathbb{R}^{m \times n}, \quad C_{ij} = \sum_{p=1}^k A_{ip} B_{pj}$$
 - Inner dimensions must match ($k$). Complexity: $\mathcal{O}(m \cdot k \cdot n)$.
-- **Implementation:** [`matrix_multiply`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/ml/from_scratch/primitives.py).
+- **Implementation:** [`matrix_multiply`](../app/ml/from_scratch/primitives.py).
 
 ---
 
@@ -59,7 +59,7 @@ $$\frac{\partial L}{\partial z} = \frac{\partial L}{\partial a} \cdot g'(z)$$
 $$\frac{\partial L}{\partial \mathbf{w}} = \frac{\partial L}{\partial z} \cdot \mathbf{x}^T$$
 $$\frac{\partial L}{\partial b} = \frac{\partial L}{\partial z}$$
 $$\frac{\partial L}{\partial \mathbf{x}} = \frac{\partial L}{\partial z} \cdot \mathbf{w}^T$$
-- **Implementation:** [`Neuron`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/ml/from_scratch/neuron.py).
+- **Implementation:** [`Neuron`](../app/ml/from_scratch/neuron.py).
 
 ### 3.2 Vectorized Dense Layer (Batch Matrix Calculus)
 For a batch of $N$ samples $\mathbf{X} \in \mathbb{R}^{N \times D_{\text{in}}}$, weight matrix $\mathbf{W} \in \mathbb{R}^{D_{\text{in}} \times D_{\text{out}}}$, and bias vector $\mathbf{b} \in \mathbb{R}^{1 \times D_{\text{out}}}$:
@@ -75,7 +75,7 @@ Given upstream gradient tensor $\frac{\partial L}{\partial \mathbf{Z}} \in \math
 3. **Gradient with respect to Bias Vector $\mathbf{b}$:**
    $$\frac{\partial L}{\partial \mathbf{b}} = \sum_{i=1}^N \left( \frac{\partial L}{\partial \mathbf{Z}} \right)_{i, :} \quad \in \mathbb{R}^{1 \times D_{\text{out}}}$$
 - **Weight Initializations:** Xavier / Glorot uniform ($\mathcal{U}(-\sqrt{6/(d_{\text{in}}+d_{\text{out}})}, \sqrt{6/(d_{\text{in}}+d_{\text{out}})})$) and He normal ($\mathcal{N}(0, \sqrt{2/d_{\text{in}}})$).
-- **Implementation:** [`Dense`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/ml/from_scratch/layers.py).
+- **Implementation:** [`Dense`](../app/ml/from_scratch/layers.py).
 
 ---
 
@@ -90,7 +90,7 @@ Given upstream gradient tensor $\frac{\partial L}{\partial \mathbf{Z}} \in \math
 
 - **Vectorized Softmax Gradient:**
   $$\frac{\partial L}{\partial z_i} = S_i \left( \frac{\partial L}{\partial S_i} - \sum_{k} \frac{\partial L}{\partial S_k} S_k \right)$$
-- **Implementation:** [`app/ml/from_scratch/activations.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/ml/from_scratch/activations.py).
+- **Implementation:** [`app/ml/from_scratch/activations.py`](../app/ml/from_scratch/activations.py).
 
 ---
 
@@ -100,14 +100,14 @@ Given upstream gradient tensor $\frac{\partial L}{\partial \mathbf{Z}} \in \math
 $$L(\mathbf{y}, \hat{\mathbf{y}}) = \frac{1}{2N} \sum_{i=1}^N \|\mathbf{y}_i - \hat{\mathbf{y}}_i\|_2^2$$
 $$\frac{\partial L}{\partial \hat{\mathbf{y}}} = \frac{1}{N} (\hat{\mathbf{y}} - \mathbf{y})$$
 - Factor of $\frac{1}{2}$ cancels cleanly with the exponent during differentiation.
-- **Implementation:** [`MeanSquaredError`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/ml/from_scratch/losses.py).
+- **Implementation:** [`MeanSquaredError`](../app/ml/from_scratch/losses.py).
 
 ### 5.2 Binary Cross-Entropy (BCE)
 For binary classification ($y \in \{0, 1\}$, $\hat{y} \in (0, 1)$):
 $$L(\mathbf{y}, \hat{\mathbf{y}}) = -\frac{1}{N} \sum_{i=1}^N \left[ y_i \ln(\hat{y}_i) + (1 - y_i) \ln(1 - \hat{y}_i) \right]$$
 $$\frac{\partial L}{\partial \hat{\mathbf{y}}} = \frac{1}{N} \left[ \frac{\hat{y}_i - y_i}{\hat{y}_i (1 - \hat{y}_i)} \right]$$
 - **Numerical Safeguard:** $\hat{y}$ is clamped to $[\epsilon, 1 - \epsilon]$ with $\epsilon = 10^{-12}$ to prevent $\ln(0) = -\infty$ and division by zero.
-- **Implementation:** [`BinaryCrossEntropy`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/ml/from_scratch/losses.py).
+- **Implementation:** [`BinaryCrossEntropy`](../app/ml/from_scratch/losses.py).
 
 ---
 
@@ -120,7 +120,7 @@ A dynamic Directed Acyclic Graph (DAG) tracks operations during the forward pass
   $$\frac{\partial L}{\partial v} = \sum_{c \in \text{Children}(v)} \frac{\partial L}{\partial c} \frac{\partial c}{\partial v}$$
 - **Topological Sorting:** Post-order depth-first search computes reverse execution ordering.
 - **Unbroadcasting (`_unbroadcast`):** Safely sums out broadcasted batch and leading dimensions when gradients flow back to smaller shapes.
-- **Implementation:** [`app/ml/from_scratch/computational_graph.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/app/ml/from_scratch/computational_graph.py).
+- **Implementation:** [`app/ml/from_scratch/computational_graph.py`](../app/ml/from_scratch/computational_graph.py).
 
 ---
 
@@ -150,7 +150,7 @@ $$\text{RelativeError} = \frac{\|\nabla_{\text{analytical}} - \nabla_{\text{nume
 
 ## 8. Unit Test Suite Summary
 
-- **Test Suite:** [`tests/test_nn_from_scratch.py`](file:///c:/Users/hp/PycharmProjects/pbl_dl/tests/test_nn_from_scratch.py)
+- **Test Suite:** [`tests/test_nn_from_scratch.py`](../tests/test_nn_from_scratch.py)
 - **Tests Executed:** 16 tests
 - **Execution Time:** ~0.25s
 - **Pass Rate:** 100% (16 passed, 0 failed)

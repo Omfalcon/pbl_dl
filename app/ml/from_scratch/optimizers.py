@@ -2,6 +2,7 @@
 
 Mathematical Foundations:
 1. Standard Stochastic Gradient Descent (SGD):
+   g_t = grad + weight_decay * theta_{t-1}
    theta_t = theta_{t-1} - lr * g_t
 
 2. SGD with Momentum:
@@ -38,13 +39,15 @@ class LRScheduler(ABC):
     """Abstract Base Class for Learning Rate Schedulers."""
 
     def __init__(self, initial_lr: float) -> None:
-        self.initial_lr = initial_lr
-        self.current_lr = initial_lr
+        if initial_lr <= 0.0 or not math.isfinite(initial_lr):
+            raise ValueError(f"Initial learning rate must be positive and finite; got {initial_lr}")
+        self.initial_lr = float(initial_lr)
+        self.current_lr = float(initial_lr)
         self.step_count = 0
 
     @abstractmethod
     def get_lr(self, step: int) -> float:
-        """Calculate learning rate at step."""
+        """Calculate learning rate at given step count."""
         pass
 
     def step(self) -> float:
@@ -59,8 +62,12 @@ class StepLR(LRScheduler):
 
     def __init__(self, initial_lr: float, step_size: int, gamma: float = 0.1) -> None:
         super().__init__(initial_lr)
+        if step_size <= 0:
+            raise ValueError(f"step_size must be positive integer; got {step_size}")
+        if not (0.0 < gamma <= 1.0) or not math.isfinite(gamma):
+            raise ValueError(f"gamma must be in (0, 1]; got {gamma}")
         self.step_size = step_size
-        self.gamma = gamma
+        self.gamma = float(gamma)
 
     def get_lr(self, step: int) -> float:
         exponent = step // self.step_size
@@ -72,7 +79,9 @@ class ExponentialLR(LRScheduler):
 
     def __init__(self, initial_lr: float, gamma: float = 0.95) -> None:
         super().__init__(initial_lr)
-        self.gamma = gamma
+        if not (0.0 < gamma <= 1.0) or not math.isfinite(gamma):
+            raise ValueError(f"gamma must be in (0, 1]; got {gamma}")
+        self.gamma = float(gamma)
 
     def get_lr(self, step: int) -> float:
         return float(self.initial_lr * (self.gamma ** step))
@@ -83,8 +92,14 @@ class CosineAnnealingLR(LRScheduler):
 
     def __init__(self, initial_lr: float, t_max: int, eta_min: float = 0.0) -> None:
         super().__init__(initial_lr)
+        if t_max <= 0:
+            raise ValueError(f"t_max must be positive integer; got {t_max}")
+        if eta_min < 0.0 or not math.isfinite(eta_min):
+            raise ValueError(f"eta_min must be non-negative and finite; got {eta_min}")
+        if eta_min > initial_lr:
+            raise ValueError(f"eta_min ({eta_min}) cannot exceed initial_lr ({initial_lr})")
         self.t_max = t_max
-        self.eta_min = eta_min
+        self.eta_min = float(eta_min)
 
     def get_lr(self, step: int) -> float:
         if step >= self.t_max:
@@ -102,15 +117,61 @@ class Optimizer(ABC):
         weight_decay: float = 0.0,
         scheduler: LRScheduler | None = None,
     ) -> None:
-        self.lr = lr
-        self.weight_decay = weight_decay
+        if lr <= 0.0 or not math.isfinite(lr):
+            raise ValueError(f"Learning rate must be positive and finite; got {lr}")
+        if weight_decay < 0.0 or not math.isfinite(weight_decay):
+            raise ValueError(f"Weight decay must be non-negative and finite; got {weight_decay}")
+
+        self._lr = float(lr)
+        self.weight_decay = float(weight_decay)
         self.scheduler = scheduler
         self.t = 0  # iteration counter
 
-    def update_lr(self) -> float:
+        # Keep initial optimizer and scheduler learning rates synchronized
         if self.scheduler is not None:
-            self.lr = self.scheduler.step()
+            self._lr = self.scheduler.current_lr
+
+    @property
+    def lr(self) -> float:
+        """Synchronized learning rate."""
+        if self.scheduler is not None:
+            return self.scheduler.current_lr
+        return self._lr
+
+    @lr.setter
+    def lr(self, value: float) -> None:
+        if value <= 0.0 or not math.isfinite(value):
+            raise ValueError(f"Learning rate must be positive and finite; got {value}")
+        self._lr = float(value)
+        if self.scheduler is not None:
+            self.scheduler.current_lr = self._lr
+
+    def update_lr(self) -> float:
+        """Advance scheduler and synchronize learning rate."""
+        if self.scheduler is not None:
+            self._lr = self.scheduler.step()
         return self.lr
+
+    def validate_inputs(self, params: list[np.ndarray], grads: list[np.ndarray]) -> None:
+        """Validate parameter and gradient list lengths, shapes, and finite values.
+
+        Prevents silent parameter skips through zip truncation.
+        """
+        if len(params) != len(grads):
+            raise ValueError(
+                f"Parameter and gradient list lengths must match; got {len(params)} parameters and {len(grads)} gradients"
+            )
+        for idx, (p, g) in enumerate(zip(params, grads)):
+            if not isinstance(p, np.ndarray) or not isinstance(g, np.ndarray):
+                raise TypeError(f"Parameters and gradients must be numpy arrays; got {type(p)} and {type(g)} at index {idx}")
+            if p.shape != g.shape:
+                raise ValueError(
+                    f"Shape mismatch at index {idx}: parameter shape {p.shape} != gradient shape {g.shape}"
+                )
+            if not np.all(np.isfinite(g)):
+                raise ValueError(
+                    f"Non-finite gradient (NaN or Inf) detected at parameter index {idx}"
+                )
 
     @abstractmethod
     def step(self, params: list[np.ndarray], grads: list[np.ndarray]) -> None:
@@ -122,12 +183,15 @@ class SGD(Optimizer):
     """Standard Stochastic Gradient Descent with optional Weight Decay."""
 
     def step(self, params: list[np.ndarray], grads: list[np.ndarray]) -> None:
+        self.validate_inputs(params, grads)
         self.t += 1
+
         for p, g in zip(params, grads):
             grad = g
             if self.weight_decay > 0.0:
                 grad = grad + self.weight_decay * p
             p -= self.lr * grad
+
         self.update_lr()
 
 
@@ -142,13 +206,30 @@ class SGDMomentum(Optimizer):
         scheduler: LRScheduler | None = None,
     ) -> None:
         super().__init__(lr=lr, weight_decay=weight_decay, scheduler=scheduler)
-        self.momentum = momentum
+        if not (0.0 <= momentum < 1.0) or not math.isfinite(momentum):
+            raise ValueError(f"Momentum must be in [0, 1); got {momentum}")
+        self.momentum = float(momentum)
         self.velocities: list[np.ndarray] = []
 
-    def step(self, params: list[np.ndarray], grads: list[np.ndarray]) -> None:
-        self.t += 1
+    def _validate_state(self, params: list[np.ndarray]) -> None:
+        """Validate optimizer velocity state consistency when parameter structures change."""
         if not self.velocities:
-            self.velocities = [np.zeros_like(p) for p in params]
+            self.velocities = [np.zeros_like(p, dtype=np.float64) for p in params]
+            return
+        if len(self.velocities) != len(params):
+            raise ValueError(
+                f"Optimizer state inconsistent: expected {len(self.velocities)} velocities, got {len(params)} parameters"
+            )
+        for idx, (v, p) in enumerate(zip(self.velocities, params)):
+            if v.shape != p.shape:
+                raise ValueError(
+                    f"Optimizer state shape mismatch at index {idx}: velocity shape {v.shape} != param shape {p.shape}"
+                )
+
+    def step(self, params: list[np.ndarray], grads: list[np.ndarray]) -> None:
+        self.validate_inputs(params, grads)
+        self._validate_state(params)
+        self.t += 1
 
         for i, (p, g) in enumerate(zip(params, grads)):
             grad = g
@@ -175,14 +256,33 @@ class RMSProp(Optimizer):
         scheduler: LRScheduler | None = None,
     ) -> None:
         super().__init__(lr=lr, weight_decay=weight_decay, scheduler=scheduler)
-        self.decay_rate = decay_rate
-        self.eps = eps
+        if not (0.0 <= decay_rate < 1.0) or not math.isfinite(decay_rate):
+            raise ValueError(f"Decay rate must be in [0, 1); got {decay_rate}")
+        if eps <= 0.0 or not math.isfinite(eps):
+            raise ValueError(f"Epsilon must be positive and finite; got {eps}")
+        self.decay_rate = float(decay_rate)
+        self.eps = float(eps)
         self.squared_grads: list[np.ndarray] = []
 
-    def step(self, params: list[np.ndarray], grads: list[np.ndarray]) -> None:
-        self.t += 1
+    def _validate_state(self, params: list[np.ndarray]) -> None:
+        """Validate optimizer squared-gradient state consistency when parameter structures change."""
         if not self.squared_grads:
-            self.squared_grads = [np.zeros_like(p) for p in params]
+            self.squared_grads = [np.zeros_like(p, dtype=np.float64) for p in params]
+            return
+        if len(self.squared_grads) != len(params):
+            raise ValueError(
+                f"Optimizer state inconsistent: expected {len(self.squared_grads)} states, got {len(params)} parameters"
+            )
+        for idx, (s, p) in enumerate(zip(self.squared_grads, params)):
+            if s.shape != p.shape:
+                raise ValueError(
+                    f"Optimizer state shape mismatch at index {idx}: squared_grad shape {s.shape} != param shape {p.shape}"
+                )
+
+    def step(self, params: list[np.ndarray], grads: list[np.ndarray]) -> None:
+        self.validate_inputs(params, grads)
+        self._validate_state(params)
+        self.t += 1
 
         for i, (p, g) in enumerate(zip(params, grads)):
             grad = g
@@ -193,7 +293,7 @@ class RMSProp(Optimizer):
             self.squared_grads[i] = (
                 self.decay_rate * self.squared_grads[i] + (1.0 - self.decay_rate) * (grad ** 2)
             )
-            # p_t = p_{t-1} - (lr / sqrt(s_t + eps)) * g_t
+            # p_t = p_{t-1} - (lr / sqrt(s_t + eps)) * grad
             p -= (self.lr / np.sqrt(self.squared_grads[i] + self.eps)) * grad
 
         self.update_lr()
@@ -212,17 +312,39 @@ class Adam(Optimizer):
         scheduler: LRScheduler | None = None,
     ) -> None:
         super().__init__(lr=lr, weight_decay=weight_decay, scheduler=scheduler)
-        self.beta1 = beta1
-        self.beta2 = beta2
-        self.eps = eps
+        if not (0.0 <= beta1 < 1.0) or not math.isfinite(beta1):
+            raise ValueError(f"beta1 must be in [0, 1); got {beta1}")
+        if not (0.0 <= beta2 < 1.0) or not math.isfinite(beta2):
+            raise ValueError(f"beta2 must be in [0, 1); got {beta2}")
+        if eps <= 0.0 or not math.isfinite(eps):
+            raise ValueError(f"Epsilon must be positive and finite; got {eps}")
+
+        self.beta1 = float(beta1)
+        self.beta2 = float(beta2)
+        self.eps = float(eps)
         self.m: list[np.ndarray] = []  # 1st moment
         self.v: list[np.ndarray] = []  # 2nd moment
 
-    def step(self, params: list[np.ndarray], grads: list[np.ndarray]) -> None:
-        self.t += 1
+    def _validate_state(self, params: list[np.ndarray]) -> None:
+        """Validate optimizer moment state consistency when parameter structures change."""
         if not self.m:
-            self.m = [np.zeros_like(p) for p in params]
-            self.v = [np.zeros_like(p) for p in params]
+            self.m = [np.zeros_like(p, dtype=np.float64) for p in params]
+            self.v = [np.zeros_like(p, dtype=np.float64) for p in params]
+            return
+        if len(self.m) != len(params) or len(self.v) != len(params):
+            raise ValueError(
+                f"Optimizer state inconsistent: expected {len(self.m)} states, got {len(params)} parameters"
+            )
+        for idx, (m, v, p) in enumerate(zip(self.m, self.v, params)):
+            if m.shape != p.shape or v.shape != p.shape:
+                raise ValueError(
+                    f"Optimizer state shape mismatch at index {idx}: moment shape {m.shape} != param shape {p.shape}"
+                )
+
+    def step(self, params: list[np.ndarray], grads: list[np.ndarray]) -> None:
+        self.validate_inputs(params, grads)
+        self._validate_state(params)
+        self.t += 1
 
         # Bias correction factors
         bias_correction1 = 1.0 - (self.beta1 ** self.t)

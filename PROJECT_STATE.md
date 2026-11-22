@@ -1,9 +1,9 @@
 # PROJECT_STATE.md — Persistent Project State
 
 **Project:** PhishVision AI (Phishing Website and Brand Impersonation Detector)  
-**Current Phase:** 2 — Dataset Acquisition, Preparation, Annotation & Validation  
-**Phase Status:** COMPLETED  
-**Next Phase:** Phase 3 — Neural Network Mathematical Sandbox from Scratch  
+**Current Phase:** Phase 4 — Feedforward Deep Neural Network for Lexical Phishing Detection  
+**Phase Status:** IN PROGRESS (Optimizers and Schedulers Completed; Feature Extraction & MLP Remaining)  
+**Next Milestone:** Lexical Feature Extraction Pipeline & MLP Training  
 **Last Updated:** 2026-11-22  
 
 ---
@@ -14,31 +14,29 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
 
 - **Phase 0 (System Architecture & Requirements):** COMPLETED.
 - **Phase 1 & Phase 1.1 (Repository Foundation, Scanner Implementation & Security Hardening):** COMPLETED.
-- **Phase 2 (Dataset Acquisition, Preparation, Annotation & Validation):** COMPLETED (INCLUDING FINAL VISUAL DATASET INTEGRATION).
-  - All 4 Milestones (2A, 2B, 2C, 2D) fully implemented, validated, and hardened through code review and empirical visual acquisition.
-  - Raw feeds ingested: PhishTank (43k), Tranco (50k), PhreshPhish (1k), OpenPhish (300), Zenodo brands (86), and External Visual Dataset (1,000 screenshots).
+- **Phase 2 (Dataset Acquisition, Preparation, Annotation & Validation):** COMPLETED (COMMITTED in `56d8565`).
+  - Ingested multi-source raw feeds: PhishTank, Tranco, PhreshPhish, OpenPhish, Zenodo brands, and External Visual Dataset (1,000 screenshots).
   - Ground-truth separation: **44,129 verified URL records** (43,535 Phishing, 594 Legitimate) in `corpus_normalized.parquet`; **50,000 unverified candidate domains** isolated in `tranco_candidate_pool.parquet`.
-  - Visual Dataset: **1,008 total valid screenshots on disk** (804 Phishing, 204 Legitimate; 1,000 external + 8 scanner baseline). Catalogued into `data/processed/screenshots/visual_corpus.parquet`.
-  - Curated Brand Reference Gallery established for 18 target brands (0 local image assets on disk accurately audited).
-  - Annotation validation and visualization suite operational for YOLO bounding boxes (independent box evaluation) and semantic segmentation masks (`SegmentationMaskManager` for image-mask pairing).
+  - Visual Dataset: **1,008 total valid screenshots on disk** (804 Phishing, 204 Legitimate). Catalogued in `data/processed/screenshots/visual_corpus.parquet`.
+  - Brand Reference Gallery established for 18 target brands.
+  - Annotation validation and visualization suite operational for YOLO bounding boxes (independent box evaluation) and semantic segmentation masks.
   - Domain-aware leakage-safe splitting generated:
     - URL Splits: Train (32,157 records), Val (7,715 records), Test (4,257 records) with **0 domain leakage**.
     - Visual Splits: Train (624 screenshots), Val (262 screenshots), Test (114 screenshots) with **0 domain leakage, 0 exact duplicate leakage, and 0 near-duplicate leakage**.
-  - Comprehensive statistical profile exported to `data/reports/dataset_statistics.json`.
-  - **Phase 2 Committed in git:** `56d8565` (`feat(dataset): finalize Phase 2 visual dataset integration`).
+  - Statistical profile exported to `data/reports/dataset_statistics.json`.
 - **Phase 3 (Neural Network Mathematical Sandbox from Scratch):** COMPLETED.
   - Linear algebra primitives (dot product, norms, matrix multiply, cosine similarity).
   - Activations & analytical derivatives (ReLU, Sigmoid, Tanh, Softmax).
   - Loss functions & gradients (MSE, Binary Cross Entropy with stability clamping).
   - Single artificial neuron with analytic forward/backward propagation.
   - Fully vectorized Dense layer with Xavier/He initialization and backpropagation.
-  - Sequential multi-layer MLP pipeline.
   - Dynamic reverse-mode automatic differentiation computational graph.
   - Central finite differences numerical gradient checker (asserting relative error $< 10^{-6}$).
-  - Full mathematical documentation published in `docs/PHASE_3_MATH_FOUNDATIONS.md`.
+  - Full mathematical documentation published in [`docs/PHASE_3_MATH_FOUNDATIONS.md`](docs/PHASE_3_MATH_FOUNDATIONS.md).
 - **Phase 4 (Feedforward Deep Neural Network for Lexical Phishing Detection):** IN PROGRESS.
   - Implemented 4 custom optimizers from scratch: SGD, SGD with Momentum, RMSProp, and Adam (`app/ml/from_scratch/optimizers.py`).
   - Implemented 3 learning rate schedulers: StepLR, ExponentialLR, and CosineAnnealingLR.
+  - Hardened with input length validation, shape checking, gradient finiteness checks, state consistency, and scheduler rate synchronization.
   - Verified updates against hand-calculated analytical values and proven convergence on regression & classification.
   - Optimizer convergence benchmark exported to `data/reports/optimizer_benchmark.json`.
   - **Full test suite: 156 unit tests passing in ~4.8s**. Zero regressions.
@@ -48,7 +46,7 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
 ## 2. Current State Snapshot
 
 - **Active Phase:** `Phase 4` (Feedforward Deep Neural Network for Lexical Phishing Detection)
-- **Target Next Phase:** `Phase 5` (Lexical Feature Extraction Pipeline & MLP Training)
+- **Target Next Step:** Lexical URL feature extraction pipeline & MLP model training
 - **Working Modules:**
   - `app.scanner.anti_ssrf`: Hardened URL parsing, port validation, DNS resolution, and IP classification.
   - `app.scanner.proxy`: Validating local egress forward proxy with connection-level IP pinning and TLS SNI preservation.
@@ -66,15 +64,24 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
   - `scripts.datasets.generate_annotations`: Annotation manager and preview generator.
   - `scripts.datasets.generate_splits`: Domain-aware leakage-safe train/val/test partitioner.
   - `scripts.datasets.dataset_statistics`: Comprehensive dataset profiler.
-- **Working Environment:**
-  - Python: `3.13.3` (Located at `C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe`)
+  - `app.ml.from_scratch.primitives`: Mathematical primitives (dot product, matrix multiply, cosine similarity, vector norms).
+  - `app.ml.from_scratch.activations`: Activation functions and analytic derivatives (ReLU, Sigmoid, Tanh, Softmax).
+  - `app.ml.from_scratch.losses`: Loss functions and analytic gradients (MSE, Binary Cross Entropy).
+  - `app.ml.from_scratch.neuron`: Single neuron forward and backward pass.
+  - `app.ml.from_scratch.layers`: Dense layer with weight/bias initialization, forward and backward propagation.
+  - `app.ml.from_scratch.computational_graph`: Reverse-mode automatic differentiation tape and DAG topological execution.
+  - `app.ml.from_scratch.gradient_check`: Finite-differences numerical gradient validation.
+  - `app.ml.from_scratch.optimizers`: SGD, SGDMomentum, RMSProp, Adam, StepLR, ExponentialLR, CosineAnnealingLR.
+- **Working Environment & Reproducibility:**
+  - Python: `3.11 - 3.13` support (Active local environment: `Python 3.13.3`)
   - Deep Learning Framework: `PyTorch 2.6.0+cu124` (Hardware acceleration: CUDA 12.4 operational)
   - Key Libraries: `playwright 1.50+`, `beautifulsoup4 4.14.3`, `tldextract 5.3.1`, `pydantic 2.x`, `torchvision 0.21.0`, `ultralytics 8.4.60`, `scikit-learn 1.8.0`, `imagehash 4.3.2`
-- **Git State:** Tracking `main`, clean repository structure with `.gitignore` excluding transient scan artifacts.
+  - Automated CI: GitHub Actions (`.github/workflows/ci.yml`)
+- **Git State:** Tracking `main`, clean repository structure with `.gitignore` excluding transient scan artifacts, raw archives, and datasets.
 
 ---
 
-## 3. Completed Work
+## 3. Completed Milestones
 
 ### Phase 0: Project Blueprint, Requirements & Architecture (COMPLETED)
 1. Authored all 10 context management documents: `AGENTS.md`, `PROJECT_STATE.md`, `CURRENT_PHASE.md`, `REQUIREMENTS.md`, `ARCHITECTURE.md`, `TECH_STACK.md`, `API_CONTRACTS.md`, `DATASET_MANIFEST.md`, `MODEL_REGISTRY.md`, `DECISIONS.md`, and `PHASE_ROADMAP.md`.
@@ -83,41 +90,34 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
 
 ### Phase 1 & 1.1: Scanner Implementation & Security Hardening (COMPLETED)
 1. **Package Hierarchy:** Created `app/core/`, `app/scanner/`, `app/intelligence/`, `app/fusion/`, `app/api/`, `config/`, `tests/`, `data/`, `models/` with `__init__.py` modules.
-2. **Hardened Anti-SSRF Module (`app/scanner/anti_ssrf.py`):**
-   - Scheme and authority sanitization, port boundaries, obfuscated IP parsing (dword/hex/octal), IPv4-mapped IPv6 literal inspection.
-3. **Validating Egress Forward Proxy (`app/scanner/proxy.py`):**
-   - Intercepts all outbound HTTP/CONNECT requests from Chromium and binds outbound TCP sockets directly to validated public `pinned_ip`, preserving TLS SNI.
-4. **Hardened Playwright Scanner (`app/scanner/playwright_scanner.py`):**
-   - Removed insecure `--no-sandbox` flags, service worker blocking, popup containment, secure TLS certificate checking.
-5. **Interactive CLI (`scripts/manual_scan.py`):**
-   - Interactive manual scan CLI tool supporting both headless and `--headful` execution.
+2. **Hardened Anti-SSRF Module (`app/scanner/anti_ssrf.py`):** Scheme and authority sanitization, port boundaries, obfuscated IP parsing (dword/hex/octal), IPv4-mapped IPv6 literal inspection.
+3. **Validating Egress Forward Proxy (`app/scanner/proxy.py`):** Intercepts outbound HTTP/CONNECT requests from Chromium and binds outbound TCP sockets directly to validated public `pinned_ip`, preserving TLS SNI.
+4. **Hardened Playwright Scanner (`app/scanner/playwright_scanner.py`):** Removed insecure `--no-sandbox` flags, service worker blocking, popup containment, secure TLS certificate checking.
+5. **Interactive CLI (`scripts/manual_scan.py`):** Interactive manual scan CLI tool supporting both headless and `--headful` execution.
 
-### Phase 2: Dataset Acquisition, Preparation & Annotation (IN PROGRESS)
-1. **Source Research & Verification (`DATASET_SOURCES.md`):**
-   - Empirically audited Zenodo, PhreshPhish, PhishTank, OpenPhish, URLhaus, and Tranco.
-2. **Curated Brand Reference Gallery (`data/brands/reference_gallery/`):**
-   - Populated `manifest_brands.json` and workspaces for 18 monitored target brands.
-3. **Automated Downloader Architecture (`scripts/datasets/download_sources/`):**
-   - Modular streaming downloaders with provenance logging (`data/metadata/provenance.json`).
-4. **Data Cleaning & Image Validation (`scripts/datasets/validate_images.py`):**
-   - Image integrity decoding, blank screenshot rejection (std dev < 3.0), and Lanczos standardization.
-5. **URL Canonicalization & Normalization (`scripts/datasets/normalize_urls.py`):**
-   - Marketing tracking parameter stripping, default port removal, PSL registrable domain extraction.
-6. **Perceptual Deduplication Engine (`scripts/datasets/deduplicate.py`):**
-   - Exact SHA-256 matching and 64-bit DCT pHash near-duplicate clustering.
-7. **Production Corpus Generation (`scripts/datasets/preprocess_pipeline.py`):**
-   - Processed **94,125 unique, balanced records** (50,589 Legitimate vs 43,536 Phishing) across **55,364 registrable domains**.
-8. **Testing & Validation:**
-   - 21 dataset unit tests passing. Total suite: **105 passed in 1.88s**.
+### Phase 2: Dataset Acquisition, Preparation & Annotation (COMPLETED)
+1. Ingested and canonicalized 44,129 verified URLs and isolated 50,000 Tranco domains in unverified candidate pool.
+2. Extracted and validated 1,008 screenshots (804 Phishing, 204 Legitimate) with zero-leakage domain partitions.
+3. Implemented YOLO bounding box and semantic segmentation annotation validation toolchain.
+4. Exported complete statistical profile to `data/reports/dataset_statistics.json`.
+5. Committed in git: `56d8565` (`feat(dataset): finalize Phase 2 visual dataset integration`).
+
+### Phase 3: Neural Network Mathematical Sandbox from Scratch (COMPLETED)
+1. Pure NumPy tensor ops, activations, loss functions, dense layers, sequential model, autograd DAG graph, and numerical gradient checking.
+2. Comprehensive documentation in [`docs/PHASE_3_MATH_FOUNDATIONS.md`](docs/PHASE_3_MATH_FOUNDATIONS.md).
+
+### Phase 4: Feedforward Deep Neural Network for Lexical Phishing Detection (IN PROGRESS)
+1. Custom optimizers from scratch: SGD, SGD with Momentum, RMSProp, Adam (`app/ml/from_scratch/optimizers.py`).
+2. Custom learning rate schedulers: StepLR, ExponentialLR, CosineAnnealingLR.
+3. Hardened parameter validation, shape checking, non-finite gradient rejection, and scheduler synchronization.
+4. Empirical convergence benchmarked in `data/reports/optimizer_benchmark.json`.
 
 ---
 
 ## 4. Pending Work (Master Plan)
 
-- **Phase 2:** Dataset acquisition, Curated Brand Reference Gallery population, annotation, and domain-based splitting.
-- **Phase 3:** Neural network mathematical sandbox (pure NumPy tensor ops, neurons, backprop, numerical gradient checking).
-- **Phase 4:** Optimizers (SGD, Momentum, Nesterov) and learning algorithms (Hebbian, Oja's, Competitive, Boltzmann).
-- **Phase 5:** URL intelligence (PSL parsing, homoglyphs, typosquatting, entropy) and MLP baseline.
+- **Phase 4 (Remaining):** URL lexical feature extraction (30+ features) and Feedforward MLP training and evaluation.
+- **Phase 5:** URL intelligence (PSL parsing, homoglyphs, typosquatting, entropy) and baseline comparison.
 - **Phase 6:** Visual Core 1 & 2: ResNet screenshot classifier (unconditional) and Siamese brand visual matcher (conditional).
 - **Phase 7:** Visual Core 3 & 4: YOLO logo/UI detector, Faster R-CNN comparative benchmark, U-Net and YOLO-Seg segmentation.
 - **Phase 8:** LSTM and Transformer redirect sequence learning.
@@ -132,24 +132,16 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
 ## 5. Technology Mandate & Operational Notes
 
 1. **Approved Technology Decision (ADR-001):**  
-   The project is officially and permanently a **Python + React** project. Legacy C/C++/Java implementation requirements, along with CMake/Make/Maven/Gradle build systems, are intentionally excluded requirements. All mathematical and ML objectives are fully preserved and executed in pure Python/NumPy/PyTorch.
-2. **Virtual Environment Filesystem Location (ADR-007):**  
-   The Python venv is located at `C:\Users\hp\PycharmProjects\blansole_footscan\.venv`. Terminal tools executing Python within this environment require either direct execution via the full binary path or `BypassSandbox: true` if cross-directory permissions are enforced.
+   The project is officially and permanently a **Python + React** project. Legacy C/C++/Java implementation requirements are excluded.
+2. **Reproducibility:**  
+   Standard installation via `requirements.txt`. Development environment uses Python 3.11–3.13.
 3. **Environment Security Boundaries:**  
-   The scanner enforces connection-level IP safety via the `ValidatingEgressProxy` and context-level routing. While this provides application and network-layer anti-SSRF and DNS rebinding immunity, true OS-level process and kernel isolation requires containerized deployment (e.g., Docker container with network namespaces and non-root execution), which will be packaged for production.
+   The scanner enforces connection-level IP safety via the `ValidatingEgressProxy` and context-level routing.
 
 ---
 
 ## 6. Last Verified Tests & Checks
 
 - **Date:** 2026-11-22
-- **Command:** `& "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m pytest -v tests/`
-- **Result:** `85 passed in 3.00s` (Exit Code 0). All Anti-SSRF rules, proxy IP pinning, TLS error handling, and live navigation checks verified.
-- **Offline Suite:** `84 passed in 0.68s` with `pytest -m "not integration"`.
-
----
-
-## 7. Exact Next Action
-
-**Begin Phase 2:**  
-Execute dataset acquisition, Curated Brand Reference Gallery population (`data/brands/reference_gallery/` for 15–20 brands), image deduplication via pHash, and leakage-safe domain-based dataset partitioning.
+- **Command:** `pytest -v -m "not integration"`
+- **Result:** `156 passed in 4.80s` (Exit Code 0). All anti-SSRF, scanner models, dataset processing, neural network math foundations, and custom optimizer edge cases verified.

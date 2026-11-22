@@ -173,3 +173,125 @@ class TestConvergenceSyntheticTasks:
             final_preds = model.forward(X)
             accuracy = float(np.mean((final_preds > 0.5) == y))
             assert accuracy >= 0.95, f"{opt_class.__name__} classification accuracy too low: {accuracy}"
+
+
+class TestOptimizerHardeningAndEdgeCases:
+    """Verifies strict input validation, shape checks, non-finite gradient rejection, and state consistency."""
+
+    def test_invalid_hyperparameters_raise_value_errors(self):
+        # Invalid Learning Rates
+        with pytest.raises(ValueError, match="positive and finite"):
+            SGD(lr=0.0)
+        with pytest.raises(ValueError, match="positive and finite"):
+            SGD(lr=-0.05)
+
+        # Invalid Weight Decay
+        with pytest.raises(ValueError, match="non-negative"):
+            SGD(lr=0.01, weight_decay=-0.01)
+
+        # Invalid Momentum
+        with pytest.raises(ValueError, match="in \\[0, 1\\)"):
+            SGDMomentum(lr=0.01, momentum=1.0)
+        with pytest.raises(ValueError, match="in \\[0, 1\\)"):
+            SGDMomentum(lr=0.01, momentum=-0.1)
+
+        # Invalid RMSProp decay and eps
+        with pytest.raises(ValueError, match="in \\[0, 1\\)"):
+            RMSProp(lr=0.01, decay_rate=1.0)
+        with pytest.raises(ValueError, match="positive and finite"):
+            RMSProp(lr=0.01, eps=0.0)
+
+        # Invalid Adam beta1, beta2 and eps
+        with pytest.raises(ValueError, match="beta1 must be in \\[0, 1\\)"):
+            Adam(lr=0.001, beta1=1.0)
+        with pytest.raises(ValueError, match="beta2 must be in \\[0, 1\\)"):
+            Adam(lr=0.001, beta2=-0.01)
+        with pytest.raises(ValueError, match="Epsilon must be positive"):
+            Adam(lr=0.001, eps=-1e-5)
+
+        # Invalid Schedulers
+        with pytest.raises(ValueError, match="step_size must be positive"):
+            StepLR(initial_lr=0.1, step_size=0)
+        with pytest.raises(ValueError, match="gamma must be in \\(0, 1\\]"):
+            ExponentialLR(initial_lr=0.1, gamma=0.0)
+        with pytest.raises(ValueError, match="t_max must be positive"):
+            CosineAnnealingLR(initial_lr=0.1, t_max=0)
+        with pytest.raises(ValueError, match="eta_min must be non-negative"):
+            CosineAnnealingLR(initial_lr=0.1, t_max=10, eta_min=-0.01)
+
+    def test_parameter_gradient_length_mismatch_rejected(self):
+        opt = SGD(lr=0.01)
+        p1 = np.array([1.0, 2.0])
+        p2 = np.array([3.0, 4.0])
+        g1 = np.array([0.1, 0.2])
+
+        with pytest.raises(ValueError, match="Parameter and gradient list lengths must match"):
+            opt.step([p1, p2], [g1])
+
+    def test_tensor_shape_mismatch_rejected(self):
+        opt = SGD(lr=0.01)
+        p = np.zeros((2, 3))
+        g = np.zeros((3, 2))  # Transposed shape
+
+        with pytest.raises(ValueError, match="Shape mismatch at index 0"):
+            opt.step([p], [g])
+
+    def test_non_finite_gradients_rejected(self):
+        opt = SGD(lr=0.01)
+        p = np.array([1.0, 2.0])
+
+        # NaN rejection
+        with pytest.raises(ValueError, match="Non-finite gradient"):
+            opt.step([p], [np.array([np.nan, 0.5])])
+
+        # Inf rejection
+        with pytest.raises(ValueError, match="Non-finite gradient"):
+            opt.step([p], [np.array([np.inf, 0.5])])
+
+    def test_optimizer_state_consistency_on_param_structure_change(self):
+        p1 = np.array([1.0, 2.0])
+        g1 = np.array([0.1, 0.2])
+
+        # 1. SGDMomentum state consistency check
+        opt_mom = SGDMomentum(lr=0.01)
+        opt_mom.step([p1], [g1])
+        assert len(opt_mom.velocities) == 1
+
+        # Changing param shape after init must be caught
+        p_wrong_shape = np.array([1.0, 2.0, 3.0])
+        g_wrong_shape = np.array([0.1, 0.2, 0.3])
+        with pytest.raises(ValueError, match="Optimizer state shape mismatch"):
+            opt_mom.step([p_wrong_shape], [g_wrong_shape])
+
+        # Changing number of params after init must be caught
+        with pytest.raises(ValueError, match="Optimizer state inconsistent"):
+            opt_mom.step([p1, p1], [g1, g1])
+
+        # 2. Adam state consistency check
+        opt_adam = Adam(lr=0.001)
+        opt_adam.step([p1], [g1])
+        with pytest.raises(ValueError, match="Optimizer state shape mismatch"):
+            opt_adam.step([p_wrong_shape], [g_wrong_shape])
+
+    def test_scheduler_synchronization(self):
+        sched = StepLR(initial_lr=0.1, step_size=2, gamma=0.5)
+        opt = SGD(lr=0.1, scheduler=sched)
+
+        assert opt.lr == 0.1
+        p = np.array([1.0])
+        g = np.array([0.5])
+
+        # Step 1 -> count=1, lr=0.1
+        opt.step([p], [g])
+        assert opt.lr == 0.1
+        assert sched.current_lr == 0.1
+
+        # Step 2 -> count=2, step_size reached -> lr=0.05
+        opt.step([p], [g])
+        assert opt.lr == 0.05
+        assert sched.current_lr == 0.05
+
+        # Manual setter synchronization
+        opt.lr = 0.02
+        assert opt.lr == 0.02
+        assert sched.current_lr == 0.02

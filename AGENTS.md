@@ -69,7 +69,7 @@ flowchart TD
 ## 3. Communication and Response Standards
 
 - Keep responses clear, professional, and grounded in actual filesystem state.
-- Provide clickable Markdown file links (e.g., `[ARCHITECTURE.md](file:///c:/Users/hp/PycharmProjects/pbl_dl/ARCHITECTURE.md)`).
+- Provide clickable Markdown file links (e.g., `[ARCHITECTURE.md](ARCHITECTURE.md)`).
 - Never claim that application features exist when only design documentation or scaffolding has been written.
 - If a blocking issue or ambiguity arises, document it in `PROJECT_STATE.md` under "Known Issues" and seek clarification.
 
