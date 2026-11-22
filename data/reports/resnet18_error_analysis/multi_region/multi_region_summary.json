@@ -1,0 +1,30 @@
+{
+  "analysis_type": "M-02 ResNet-18 Multi-Region Coverage Analysis",
+  "checkpoint": "models\\checkpoints\\resnet18\\best_model.pt",
+  "total_analyzed": 43,
+  "false_negatives": {
+    "total_fn": 39,
+    "tall_pages_aspect_ge_1_5": 29,
+    "tall_pages_percentage": 0.7436,
+    "predictions_differ_across_vertical_regions": 25,
+    "predictions_differ_percentage": 0.641,
+    "any_vertical_region_predicted_phishing": 25,
+    "full_page_pad_predicted_phishing": 34,
+    "lower_regions_elevated_phish_prob_over_top": 28,
+    "mean_top_crop_p_phish": 0.0046,
+    "mean_max_regional_p_phish": 0.6557,
+    "mean_full_page_p_phish": 0.8802
+  },
+  "false_positives": {
+    "total_fp": 4,
+    "tall_pages_aspect_ge_1_5": 3,
+    "predictions_differ_across_vertical_regions": 3,
+    "full_page_pad_predicted_phishing": 4,
+    "mean_top_crop_p_phish": 0.9482,
+    "mean_full_page_p_phish": 0.937
+  },
+  "key_findings": {
+    "top_viewport_coverage_limitation_observed": true,
+    "regional_sensitivity_detected": true
+  }
+}
