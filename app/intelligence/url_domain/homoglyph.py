@@ -124,10 +124,6 @@ class HomoglyphEvidence:
     diacritic_normalized_form: str
     is_suspicious_homoglyph: bool
     evidence_description: str
-    confusable_characters: list[dict[str, Any]]
-    canonical_form: str
-    is_suspicious_homoglyph: bool
-    evidence_description: str
 
 
 class HomoglyphDetector:

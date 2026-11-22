@@ -90,15 +90,6 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
   - `app.ml.from_scratch.computational_graph`: Reverse-mode automatic differentiation tape and DAG topological execution.
   - `app.ml.from_scratch.gradient_check`: Finite-differences numerical gradient validation.
   - `app.ml.from_scratch.optimizers`: SGD, SGDMomentum, RMSProp, Adam, StepLR, ExponentialLR, CosineAnnealingLR.
-  - `scripts.datasets.dataset_statistics`: Comprehensive dataset profiler.
-  - `app.ml.from_scratch.primitives`: Mathematical primitives (dot product, matrix multiply, cosine similarity, vector norms).
-  - `app.ml.from_scratch.activations`: Activation functions and analytic derivatives (ReLU, Sigmoid, Tanh, Softmax).
-  - `app.ml.from_scratch.losses`: Loss functions and analytic gradients (MSE, Binary Cross Entropy).
-  - `app.ml.from_scratch.neuron`: Single neuron forward and backward pass.
-  - `app.ml.from_scratch.layers`: Dense layer with weight/bias initialization, forward and backward propagation.
-  - `app.ml.from_scratch.computational_graph`: Reverse-mode automatic differentiation tape and DAG topological execution.
-  - `app.ml.from_scratch.gradient_check`: Finite-differences numerical gradient validation.
-  - `app.ml.from_scratch.optimizers`: SGD, SGDMomentum, RMSProp, Adam, StepLR, ExponentialLR, CosineAnnealingLR.
 - **Working Environment & Reproducibility:**
   - Python: `3.11 - 3.13` support (Active local environment: `Python 3.13.3`)
   - Deep Learning Framework: `PyTorch 2.6.0+cu124` (Hardware acceleration: CUDA 12.4 operational)
@@ -133,18 +124,24 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
 1. Pure NumPy tensor ops, activations, loss functions, dense layers, sequential model, autograd DAG graph, and numerical gradient checking.
 2. Comprehensive documentation in [`docs/PHASE_3_MATH_FOUNDATIONS.md`](docs/PHASE_3_MATH_FOUNDATIONS.md).
 
-### Phase 4: Feedforward Deep Neural Network for Lexical Phishing Detection (IN PROGRESS)
+### Phase 4: Optimizers, Ablations & Learning Algorithms from Scratch (COMPLETED)
 1. Custom optimizers from scratch: SGD, SGD with Momentum, RMSProp, Adam (`app/ml/from_scratch/optimizers.py`).
 2. Custom learning rate schedulers: StepLR, ExponentialLR, CosineAnnealingLR.
-3. Hardened parameter validation, shape checking, non-finite gradient rejection, and scheduler synchronization.
-4. Empirical convergence benchmarked in `data/reports/optimizer_benchmark.json`.
+3. Hardened parameter validation, shape checking, floating-point dtype/writability, non-finite gradient rejection, and scheduler synchronization.
+4. Empirical convergence benchmarked on non-linear ring dataset in `data/reports/optimizer_benchmark.json`.
+
+### Phase 5: URL Intelligence, Homoglyph Detection, Typosquatting & MLP Baseline (COMPLETED)
+1. **Public Suffix List (PSL) Domain Extractor (`app/intelligence/url_domain/psl_extractor.py`):** Multi-label ccTLD parsing (`sbi.co.in`, `paypal.co.uk`), subdomain isolation (`sbi.co.in.attacker.com`), IPv4/IPv6 literals, ports, and Punycode.
+2. **Unicode Homoglyph & Mixed-Script Detector (`app/intelligence/url_domain/homoglyph.py`):** Cross-script visual confusable detection (Cyrillic/Greek lookalikes), IDN normalization, NFKD diacritic separation, and zero false positives on pure-script IDNs (`президент.рф`, `café.com`, `münchen.de`).
+3. **Typosquatting & Brand Impersonation Detector (`app/intelligence/url_domain/typosquatting.py`):** Pure-Python Levenshtein and Damerau-Levenshtein edit distances, normalized similarity scores, brand protection, and attack classification (substitution, transposition, insertion, omission, combosquatting, subdomain spoofing).
+4. **Unified Domain Intelligence Analyzer (`app/intelligence/url_domain/analyzer.py`):** Structured evidence schema (`DomainIntelligenceEvidence`) emitting domain metrics, confusables, closest brand, and human-readable explanations.
+5. **Lexical URL Feature Extractor (`app/intelligence/lexical.py`):** 40 engineered numerical features with zero-leakage preprocessor.
+6. **Controlled Imbalance Training & MLP Baseline (`models/lexical/model_weights.npz`):** Evaluated Strategy A vs Strategy B; selected Strategy B strictly on validation metrics. Calibrated $\tau = 0.050$. Unseen test holdout metrics: **ROC-AUC: 0.9773, PR-AUC: 0.9995, Macro F1: 0.8239, Phishing F1: 0.9932, Accuracy: 98.66%**.
 
 ---
 
 ## 4. Pending Work (Master Plan)
 
-- **Phase 4 (Remaining):** URL lexical feature extraction (30+ features) and Feedforward MLP training and evaluation.
-- **Phase 5:** URL intelligence (PSL parsing, homoglyphs, typosquatting, entropy) and baseline comparison.
 - **Phase 6:** Visual Core 1 & 2: ResNet screenshot classifier (unconditional) and Siamese brand visual matcher (conditional).
 - **Phase 7:** Visual Core 3 & 4: YOLO logo/UI detector, Faster R-CNN comparative benchmark, U-Net and YOLO-Seg segmentation.
 - **Phase 8:** LSTM and Transformer redirect sequence learning.
@@ -171,4 +168,4 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
 
 - **Date:** 2026-11-22
 - **Command:** `pytest -q -m "not integration"`
-- **Result:** `186 passed, 1 deselected in 4.18s` (Exit Code 0). All anti-SSRF, scanner models, dataset processing, neural network math foundations, custom optimizers, lexical feature extractor, preprocessor, and M-01 Lexical MLP verified.
+- **Result:** `210 passed, 1 deselected in 6.13s` (Exit Code 0). All anti-SSRF, scanner models, dataset processing, neural network math foundations, custom optimizers, lexical feature extractor, preprocessor, M-01 Lexical MLP, PSL domain extraction, Unicode homoglyphs, and typosquatting detection verified.
