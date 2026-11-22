@@ -1,0 +1,7 @@
+class_id,class_name,precision,recall,f1_score,mAP50_95
+0,brand_logo,0.9995,1.0,0.9998,0.8462
+1,login_form,0.998,1.0,0.999,0.995
+2,username_field,0.9986,1.0,0.9993,0.995
+3,password_field,0.9982,1.0,0.9991,0.9932
+4,submit_button,0.9985,1.0,0.9992,0.995
+5,payment_element,0.991,1.0,0.9955,0.995

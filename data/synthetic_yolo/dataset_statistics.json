@@ -1,0 +1,90 @@
+{
+  "project": "PhishVision AI",
+  "module": "M-04 YOLOv8n Synthetic UI Elements",
+  "seed": 42,
+  "total_images": 800,
+  "classes": {
+    "0": "brand_logo",
+    "1": "login_form",
+    "2": "username_field",
+    "3": "password_field",
+    "4": "submit_button",
+    "5": "payment_element"
+  },
+  "split_counts": {
+    "train": 560,
+    "val": 120,
+    "test": 120
+  },
+  "split_stats": {
+    "train": {
+      "total_images": 560,
+      "empty_images": 47,
+      "total_boxes": 2634,
+      "classes": {
+        "brand_logo": 513,
+        "login_form": 513,
+        "username_field": 444,
+        "password_field": 444,
+        "submit_button": 513,
+        "payment_element": 207
+      },
+      "brands_used": [
+        "AegisTrust",
+        "ApexBank",
+        "CloudNexus",
+        "CyberKey",
+        "EchoPay",
+        "HyperLink",
+        "NovaStream",
+        "OrbitSocial",
+        "PaySphere",
+        "PulseNet",
+        "QuantumSecure",
+        "StarlightID",
+        "StratumCore",
+        "SwiftCart",
+        "VertexPay",
+        "ZenithPortal"
+      ]
+    },
+    "val": {
+      "total_images": 120,
+      "empty_images": 9,
+      "total_boxes": 566,
+      "classes": {
+        "brand_logo": 111,
+        "login_form": 111,
+        "username_field": 100,
+        "password_field": 100,
+        "submit_button": 111,
+        "payment_element": 33
+      },
+      "brands_used": [
+        "AeroCart",
+        "KryptonPay",
+        "SolariaBank",
+        "VortexChat"
+      ]
+    },
+    "test": {
+      "total_images": 120,
+      "empty_images": 6,
+      "total_boxes": 579,
+      "classes": {
+        "brand_logo": 114,
+        "login_form": 114,
+        "username_field": 105,
+        "password_field": 105,
+        "submit_button": 114,
+        "payment_element": 27
+      },
+      "brands_used": [
+        "BeaconAuth",
+        "OmniPay",
+        "PrismSocial",
+        "TitanVault"
+      ]
+    }
+  }
+}

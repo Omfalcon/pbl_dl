@@ -1,0 +1,11 @@
+{
+  "status": "EVALUATION_COMPLETE",
+  "model_id": "M-04",
+  "architecture": "YOLOv8n",
+  "checkpoint": "runs\\detect\\models\\checkpoints\\yolov8n_synthetic\\run1\\weights\\best.pt",
+  "split": "test",
+  "mAP50": 0.995,
+  "mAP50_95": 0.9698842207793051,
+  "precision": 0.997297344750244,
+  "recall": 1.0
+}

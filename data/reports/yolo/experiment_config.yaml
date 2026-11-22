@@ -1,0 +1,31 @@
+data:
+  dataset_yaml: data/synthetic_yolo/dataset.yaml
+  imgsz: 512
+  workers: 2
+model:
+  architecture: YOLOv8n
+  classes:
+    0: brand_logo
+    1: login_form
+    2: username_field
+    3: password_field
+    4: submit_button
+    5: payment_element
+  model_id: M-04
+  num_classes: 6
+  weights: yolov8n.pt
+paths:
+  name: run1
+  project: models/checkpoints/yolov8n_synthetic
+  report_dir: data/reports/yolo
+training:
+  batch_size: 4
+  device: 0
+  epochs: 30
+  half: true
+  optimizer: auto
+  patience: 10
+  plots: true
+  random_seed: 42
+  save: true
+  save_period: -1
