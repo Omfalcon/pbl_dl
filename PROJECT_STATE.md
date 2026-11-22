@@ -1,9 +1,9 @@
 # PROJECT_STATE.md — Persistent Project State
 
 **Project:** PhishVision AI (Phishing Website and Brand Impersonation Detector)  
-**Current Phase:** Phase 4 — Feedforward Deep Neural Network for Lexical Phishing Detection  
+**Current Phase:** Phase 5 — URL Intelligence, Homoglyph Detection, Typosquatting & MLP Baseline  
 **Phase Status:** COMPLETED  
-**Next Milestone:** Phase 5 — Advanced Homoglyph & Typosquatting Analysis / Fast-Path Deployment  
+**Next Milestone:** Phase 6 — Visual Core 1 & 2: ResNet Screenshot Classifier & Siamese Brand Matcher  
 **Last Updated:** 2026-11-22  
 
 ---
@@ -33,25 +33,36 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
   - Dynamic reverse-mode automatic differentiation computational graph.
   - Central finite differences numerical gradient checker (asserting relative error $< 10^{-6}$).
   - Full mathematical documentation published in [`docs/PHASE_3_MATH_FOUNDATIONS.md`](docs/PHASE_3_MATH_FOUNDATIONS.md).
-- **Phase 4 (Feedforward Deep Neural Network for Lexical Phishing Detection):** COMPLETED.
+- **Phase 4 (Optimizers, Ablations & Learning Algorithms from Scratch):** COMPLETED.
   - Custom optimizers from scratch: SGD, SGD with Momentum, RMSProp, and Adam (`app/ml/from_scratch/optimizers.py`).
   - Learning rate schedulers: StepLR, ExponentialLR, and CosineAnnealingLR.
   - Hardened with input length, tensor shape, parameter dtype/writability, gradient finiteness checks, state consistency, and scheduler rate synchronization.
-  - Reusable 40-feature lexical URL extractor (`app/intelligence/lexical.py`) covering lengths, counts, tokens, Shannon entropy, and brand impersonation cues with multi-label Public Suffix List (PSL) parsing via `tldextract` (e.g. `.co.uk`, `.co.in`, IPv4/IPv6, punycode).
+  - Non-linear benchmark report exported to `data/reports/optimizer_benchmark.json`.
+- **Phase 5 (URL Intelligence, Homoglyph Detection, Typosquatting & MLP Baseline):** COMPLETED.
+  - Public Suffix List (PSL) domain extraction engine (`app/intelligence/url_domain/psl_extractor.py`) supporting multi-label ccTLDs (`sbi.co.in`, `paypal.co.uk`), IPv4/IPv6, subdomains, and Punycode.
+  - Unicode homoglyph, mixed-script, and IDN confusable detection (`app/intelligence/url_domain/homoglyph.py`) with zero false positives on pure-script IDNs (`президент.рф`).
+  - Typosquatting, combosquatting, and subdomain impersonation detector (`app/intelligence/url_domain/typosquatting.py`) computing Levenshtein, Damerau-Levenshtein distance, and similarity scores against 18 protected brands.
+  - Strict preservation of official brand domains (`sbi.co.in`, `paypal.co.uk`, `google.com`).
+  - Unified `DomainIntelligenceAnalyzer` producing structured, explainable evidence schemas.
+  - Reusable 40-feature lexical URL extractor (`app/intelligence/lexical.py`) covering lengths, counts, tokens, Shannon entropy, and brand impersonation cues.
   - Zero-leakage standardization preprocessor fitted strictly on training data (`app/intelligence/preprocessing.py`, saved to `models/lexical/preprocessor.json`).
   - Controlled class imbalance strategy comparison: Strategy A (Balanced Batches + Ordinary BCE, Val Macro F1: 0.5065) vs. Strategy B (Natural Batches + Class-Weighted BCE, Val Macro F1: 0.6450). Selected Strategy B strictly on validation metrics without double-compensation.
   - Validation/test discrepancy resolved via domain-cluster analysis (accounting for 65.9% Google Docs/Forms concentration in validation) and best-validation-checkpoint restoration at epoch 17 (calibrated $\tau = 0.050$).
   - 3-Layer Lexical MLP (M-01) trained from scratch with Adam and CosineAnnealingLR (`models/lexical/model_weights.npz`).
   - Holdout test metrics on 4,257 unseen records across 908 unseen domains: **ROC-AUC: 0.9773, PR-AUC: 0.9995, Macro F1: 0.8239, Phishing F1: 0.9932, Legit F1: 0.6545, Accuracy: 98.66%**. Full report exported to `data/reports/lexical_mlp_evaluation.json`.
-  - **Full test suite: 191 unit tests passing (1 deselected) in ~4.54s**. Zero regressions.
+  - **Full test suite: 209 unit tests passing (1 deselected) in ~4.76s**. Zero regressions.
 
 ---
 
 ## 2. Current State Snapshot
 
-- **Active Phase:** `Phase 5` (Advanced Homoglyph & Typosquatting Analysis / Fast-Path Deployment)
-- **Target Next Step:** Fast-path lexical API integration and homoglyph distance modeling
+- **Active Phase:** `Phase 6` (Visual Core 1 & 2: ResNet Screenshot Classifier & Siamese Brand Matcher)
+- **Target Next Step:** Visual dataset preprocessing, data augmentation, and ResNet-18 screenshot classification head
 - **Working Modules:**
+  - `app.intelligence.url_domain.psl_extractor`: Multi-label PSL domain extractor using tldextract.
+  - `app.intelligence.url_domain.homoglyph`: Unicode confusable and mixed-script homoglyph detector.
+  - `app.intelligence.url_domain.typosquatting`: Levenshtein/Damerau-Levenshtein distance and brand impersonation detector.
+  - `app.intelligence.url_domain.analyzer`: Unified domain intelligence evidence orchestrator.
   - `app.scanner.anti_ssrf`: Hardened URL parsing, port validation, DNS resolution, and IP classification.
   - `app.scanner.proxy`: Validating local egress forward proxy with connection-level IP pinning and TLS SNI preservation.
   - `app.scanner.playwright_scanner`: Isolated Playwright Chromium scanner with context-level routing, popup containment, service worker blocking, and secure TLS checking.

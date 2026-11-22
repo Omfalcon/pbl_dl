@@ -16,6 +16,9 @@ from typing import Any
 import numpy as np
 import tldextract
 
+from app.intelligence.url_domain.analyzer import DomainIntelligenceAnalyzer, DomainIntelligenceEvidence
+from app.intelligence.url_domain.psl_extractor import PSLExtractor
+
 # Top targeted brands for brand-in-subdomain/path impersonation detection
 MONITORED_TARGET_BRANDS = {
     "paypal": ["paypal.com", "paypal-community.com", "paypal.co.uk", "paypal.me"],
@@ -159,19 +162,14 @@ class LexicalFeatureExtractor:
     def __init__(self, cache_dir: str = "data/cache/tldextract") -> None:
         self.feature_names = list(self.FEATURE_NAMES)
         self.num_features = len(self.feature_names)
-        self._tld_extractor = tldextract.TLDExtract(cache_dir=cache_dir, suffix_list_urls=())
+        self.psl_extractor = PSLExtractor(cache_dir=cache_dir)
+        self.domain_analyzer = DomainIntelligenceAnalyzer(psl_extractor=self.psl_extractor)
+        self._tld_extractor = self.psl_extractor._extractor
 
     @staticmethod
     def _is_ip_address(host: str) -> bool:
         """Check if hostname is a valid IPv4 or IPv6 address."""
-        if not host:
-            return False
-        clean_host = host.strip("[]")
-        try:
-            ipaddress.ip_address(clean_host)
-            return True
-        except ValueError:
-            return False
+        return PSLExtractor.is_ip_address(host)
 
     def _parse_url(self, url: str) -> tuple[str, str, str, str, str, str, int | None]:
         """Safely parse URL into (scheme, hostname, domain, tld, subdomain, path, port).
@@ -179,72 +177,20 @@ class LexicalFeatureExtractor:
         Reuses Public Suffix List parsing for accurate multi-label TLD handling
         (e.g. co.uk, co.in) while remaining robust against IP literals and malformed inputs.
         """
-        if not isinstance(url, str):
-            url = str(url) if url is not None else ""
-        url = url.strip()
-        if not url:
-            return "", "", "", "", "", "", None
+        info = self.psl_extractor.extract_from_url(url)
+        return (
+            info.scheme,
+            info.normalized_hostname,
+            info.registrable_domain,
+            info.suffix,
+            info.subdomain,
+            info.path,
+            info.port,
+        )
 
-        # Ensure scheme for urllib parsing
-        if not re.match(r"^[a-zA-Z][a-zA-Z0-9+\-.]*://", url):
-            url_to_parse = "http://" + url
-        else:
-            url_to_parse = url
-
-        try:
-            parsed = urllib.parse.urlsplit(url_to_parse)
-            scheme = parsed.scheme.lower()
-            netloc = parsed.netloc.lower()
-            path = parsed.path
-            query = parsed.query
-        except Exception:
-            return "", "", "", "", "", "", None
-
-        # Handle userinfo if present
-        if "@" in netloc:
-            _, netloc = netloc.rsplit("@", 1)
-
-        # Extract port and hostname (including IPv6 bracket handling)
-        port = None
-        hostname = netloc
-        if netloc.startswith("["):
-            bracket_end = netloc.find("]")
-            if bracket_end != -1:
-                hostname = netloc[: bracket_end + 1]
-                rest = netloc[bracket_end + 1 :]
-                if rest.startswith(":"):
-                    try:
-                        port = int(rest[1:])
-                    except ValueError:
-                        port = None
-        elif ":" in netloc:
-            parts = netloc.split(":")
-            hostname = parts[0]
-            try:
-                port = int(parts[1])
-            except ValueError:
-                port = None
-
-        hostname = hostname.strip("[]")
-
-        # Handle IP addresses vs PSL domain extraction
-        if self._is_ip_address(hostname):
-            domain = hostname
-            tld = ""
-            subdomain = ""
-        else:
-            ext = self._tld_extractor(hostname)
-            top_domain = getattr(ext, "top_domain_under_public_suffix", "")
-            if top_domain:
-                domain = top_domain
-            else:
-                d = getattr(ext, "domain", "")
-                s = getattr(ext, "suffix", "")
-                domain = f"{d}.{s}" if d and s else (d or hostname)
-            tld = getattr(ext, "suffix", "")
-            subdomain = getattr(ext, "subdomain", "")
-
-        return scheme, hostname, domain, tld, subdomain, path, port
+    def analyze_domain(self, url: str) -> DomainIntelligenceEvidence:
+        """Perform unified domain intelligence analysis (PSL, homoglyphs, typosquatting)."""
+        return self.domain_analyzer.analyze(url)
 
     def extract_features(self, url: str) -> dict[str, float]:
         """Extract a dictionary of named lexical features from a URL."""
