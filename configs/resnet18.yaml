@@ -1,0 +1,41 @@
+# ResNet-18 Binary Screenshot Classifier (M-02) Training Configuration
+# PhishVision AI - Phase 6
+
+model:
+  model_id: "M-02"
+  architecture: "resnet18"
+  pretrained: true                   # Use ImageNet weights for convolutional backbone
+  dropout_p: 0.3                     # Dropout probability in classification head
+  num_classes: 2
+
+data:
+  train_split: "data/splits/visual/train.parquet"
+  val_split: "data/splits/visual/val.parquet"
+  test_split: "data/splits/visual/test.parquet"
+  repo_root: "."                     # Base directory for relative image paths
+  num_workers: 0                     # Set to 0 on Windows for reliable DataLoader execution
+  pin_memory: true
+
+preprocessing:
+  image_size: 224
+  crop_strategy: "top_viewport"      # "top_viewport" (preserves top fold) or "aspect_ratio_pad"
+  viewport_ratio: 1.0                # Square top viewport fold ratio (H = W * ratio)
+  horizontal_flip: false             # Keep False for websites to preserve logo and text layout
+  color_jitter: true                 # Mild brightness/contrast jitter (+-0.1)
+
+training:
+  random_seed: 42
+  batch_size: 16
+  epochs: 15
+  learning_rate: 0.0001              # 1e-4 suitable for fine-tuning ResNet-18
+  weight_decay: 0.0001
+  optimizer: "adamw"
+  scheduler: "cosine"                # "cosine", "step", or "none"
+  early_stopping_patience: 5
+  device: "cuda"                     # "cuda" auto-falls back to "cpu" if unavailable
+  use_class_weights: true            # Dynamically computed from training split labels (N / 2*Nc)
+
+paths:
+  checkpoint_dir: "models/checkpoints/resnet18"
+  report_dir: "data/reports"
+  evaluation_report: "data/reports/resnet18_evaluation.json"

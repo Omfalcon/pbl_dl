@@ -53,16 +53,32 @@ Visual intelligence forms the central empirical contribution of PhishVision AI. 
 
 ### 2.1 M-02: ResNet Screenshot Classifier (Visual Module 1)
 - **Role:** Independent global layout classification. Operates unconditionally on any rendered webpage screenshot without requiring prior knowledge or reference images of the target domain.
-- **Backbone Architecture:** ResNet-18 (primary for production inference) / ResNet-50 (academic ablation). Head: `AdaptiveAvgPool2d` $\to$ `Flatten` $\to$ `Linear(512, 128)` $\to$ `ReLU` $\to$ `Dropout(0.3)` $\to$ `Linear(128, 2)` $\to$ `Softmax`.
+- **Backbone Architecture:** ResNet-18 (ImageNet pretrained or scratch options). Head: `AdaptiveAvgPool2d(1)` $\to$ `Flatten` $\to$ `Linear(512, 128)` $\to$ `ReLU` $\to$ `Dropout(0.3)` $\to$ `Linear(128, 2)`. Explicit class mapping `0: legitimate, 1: phishing`.
 - **Input Specifications:**
   - Shape: $B \times 3 \times 224 \times 224$ (Float32).
-  - Preprocessing: Original viewport screenshot ($1280 \times 720$) resized via bilinear interpolation; normalized with ImageNet channel means $[0.485, 0.456, 0.406]$ and standard deviations $[0.229, 0.224, 0.225]$.
+  - Preprocessing: Configurable `TopViewportCrop` (1:1 viewport ratio focusing on login/brand fold) or `AspectRatioPadResize` to preserve aspect ratio without stretching; normalized with ImageNet channel means $[0.485, 0.456, 0.406]$ and standard deviations $[0.229, 0.224, 0.225]$.
 - **Output Specifications:**
-  - Two-element vector $[\hat{p}_{\text{legit}}, \hat{p}_{\text{phish}}]$ where scalar visual risk score is $\hat{y}_{\text{resnet}} \in [0.0, 1.0]$.
-  - Grad-CAM saliency activation map ($7 \times 7$ feature grid upsampled to $224 \times 224$) highlighting influential visual regions.
-- **Training Dataset & Annotations:**
-  - 10,000 full-page screenshots (5k legitimate, 5k phishing) from `data/manifests/manifest_screenshots_general.csv`. Binary labels `0` or `1`.
-- **Evaluation Metrics:** ROC-AUC ($\ge 0.95$), Precision, Recall, Macro F1, Expected Calibration Error (ECE $\le 0.05$).
+  - Two-element logits/probabilities vector $[\hat{p}_{\text{legit}}, \hat{p}_{\text{phish}}]$ where visual risk score is $\hat{y}_{\text{resnet}} \in [0.0, 1.0]$.
+- **Training Dataset & Split Integrity:**
+  - 1,000 valid screenshots on disk (`data/splits/visual/`) with strict domain isolation:
+    - `train.parquet`: 624 samples (477 phishing, 147 legitimate, 362 unique domains)
+    - `val.parquet`: 262 samples (236 phishing, 26 legitimate, 76 unique domains)
+    - `test.parquet`: 114 samples (87 phishing, 27 legitimate, 79 unique domains)
+    - Zero domain leakage, zero exact SHA-256 duplicate overlap, zero perceptual pHash overlap.
+- **Optimization Strategy:** AdamW optimizer with weight decay $0.01$, learning rate $1 \times 10^{-4}$, Cosine Annealing learning rate schedule, dynamic class-weighted CrossEntropyLoss ($w_c = N / (2 \cdot N_c)$), early stopping on validation loss, and best-checkpoint restoration.
+- **Implementation Modules:**
+  - Architecture: [`app/ml/vision/models.py`](app/ml/vision/models.py)
+  - Preprocessing: [`app/ml/vision/preprocessing.py`](app/ml/vision/preprocessing.py)
+  - Dataset: [`app/ml/vision/dataset.py`](app/ml/vision/dataset.py)
+  - Metrics & Evaluation: [`app/ml/vision/evaluation.py`](app/ml/vision/evaluation.py)
+  - Trainer: [`app/ml/vision/trainer.py`](app/ml/vision/trainer.py)
+  - Inference: [`app/ml/vision/inference.py`](app/ml/vision/inference.py)
+  - CLI & Config: [`configs/resnet18.yaml`](configs/resnet18.yaml), [`app/ml/train_resnet18.py`](app/ml/train_resnet18.py)
+- **Status:** **Implementation and Unit Testing Complete (15 passed). Training execution pending manual trigger.**
+- **Manual Training Command:**
+  ```powershell
+  & "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.train_resnet18 --config configs/resnet18.yaml
+  ```
 
 ---
 

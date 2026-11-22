@@ -1,9 +1,9 @@
 # PROJECT_STATE.md — Persistent Project State
 
 **Project:** PhishVision AI (Phishing Website and Brand Impersonation Detector)  
-**Current Phase:** Phase 5 — URL Intelligence, Homoglyph Detection, Typosquatting & MLP Baseline  
-**Phase Status:** COMPLETED  
-**Next Milestone:** Phase 6 — Visual Core 1 & 2: ResNet Screenshot Classifier & Siamese Brand Matcher  
+**Current Phase:** Phase 6 — Visual Core: ResNet-18 Screenshot Classifier Pipeline Implementation  
+**Phase Status:** IMPLEMENTATION & TESTING COMPLETE (TRAINING PENDING MANUAL EXECUTION)  
+**Next Milestone:** Manual Execution of M-02 Training & Phase 6.2 (Siamese Brand Matcher upon brand asset availability)  
 **Last Updated:** 2026-11-22  
 
 ---
@@ -90,6 +90,13 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
   - `app.ml.from_scratch.computational_graph`: Reverse-mode automatic differentiation tape and DAG topological execution.
   - `app.ml.from_scratch.gradient_check`: Finite-differences numerical gradient validation.
   - `app.ml.from_scratch.optimizers`: SGD, SGDMomentum, RMSProp, Adam, StepLR, ExponentialLR, CosineAnnealingLR.
+  - `app.ml.vision.models`: ResNet-18 screenshot classification architecture with custom 2-class head (`Linear(512,128) -> ReLU -> Dropout(0.3) -> Linear(128,2)`).
+  - `app.ml.vision.preprocessing`: Viewport cropping (`TopViewportCrop`, `AspectRatioPadResize`), deterministic transforms, and safe PIL loading.
+  - `app.ml.vision.dataset`: Parquet/DataFrame screenshot dataset loader with dynamic class-weight computation.
+  - `app.ml.vision.evaluation`: Multiclass and binary metrics (Acc, Precision, Recall, F1, ROC-AUC, PR-AUC, confusion matrix).
+  - `app.ml.vision.trainer`: Modular ResNet-18 training engine with early stopping, dynamic class weighting, and best-checkpoint restoration.
+  - `app.ml.vision.inference`: Production inference engine with checkpoint restoration and calibrated probabilities.
+  - `app.ml.train_resnet18`: Reproducible CLI entry point supporting YAML config and argument overrides.
 - **Working Environment & Reproducibility:**
   - Python: `3.11 - 3.13` support (Active local environment: `Python 3.13.3`)
   - Deep Learning Framework: `PyTorch 2.6.0+cu124` (Hardware acceleration: CUDA 12.4 operational)
@@ -138,11 +145,23 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
 5. **Lexical URL Feature Extractor (`app/intelligence/lexical.py`):** 40 engineered numerical features with zero-leakage preprocessor.
 6. **Controlled Imbalance Training & MLP Baseline (`models/lexical/model_weights.npz`):** Evaluated Strategy A vs Strategy B; selected Strategy B strictly on validation metrics. Calibrated $\tau = 0.050$. Unseen test holdout metrics: **ROC-AUC: 0.9773, PR-AUC: 0.9995, Macro F1: 0.8239, Phishing F1: 0.9932, Accuracy: 98.66%**.
 
+### Phase 6.1: Visual Core 1 — ResNet-18 Screenshot Classifier Pipeline (IMPLEMENTATION & TESTING COMPLETE)
+1. **Modular Architecture (`app/ml/vision/models.py`):** ResNet-18 backbone with custom 2-class classification head (`AdaptiveAvgPool2d(1) -> Flatten -> Linear(512,128) -> ReLU -> Dropout(0.3) -> Linear(128,2)`). Explicit class mapping `0: legitimate, 1: phishing`.
+2. **Configurable Preprocessing (`app/ml/vision/preprocessing.py`):** `TopViewportCrop` focusing on fold 1:1 aspect ratio where authentication/brand UI elements concentrate; `AspectRatioPadResize` preventing layout distortion; deterministic validation/test standardization using ImageNet stats.
+3. **Dataset Loader (`app/ml/vision/dataset.py`):** `ScreenshotDataset` supporting parquet and DataFrame inputs with dynamic inverse-frequency class weights $w_c = N / (2 \cdot N_c)$. Verified on visual splits (`train.parquet`: 624, `val.parquet`: 262, `test.parquet`: 114) with 0 domain overlap.
+4. **Evaluation Engine (`app/ml/vision/evaluation.py`):** Full vision metrics suite including Accuracy, per-class Prec/Rec/F1, Macro/Weighted F1, Confusion Matrix, ROC-AUC, and PR-AUC with single-class edge case safeguards.
+5. **Training Pipeline (`app/ml/vision/trainer.py`):** `ResNet18Trainer` supporting AdamW, Cosine Annealing/StepLR, dynamic class-weighted CrossEntropyLoss, early stopping, and best-validation-checkpoint restoration.
+6. **Production Inference (`app/ml/vision/inference.py`):** Single-image and batched prediction engine restoring weights and preprocessing configurations to yield calibrated probabilities.
+7. **CLI & Config (`configs/resnet18.yaml`, `app/ml/train_resnet18.py`):** Declarative configuration with comprehensive CLI override flags.
+8. **Execution Mandate Honored:** In strict compliance with instructions, zero training epochs were run. Training is staged for manual execution via:
+   `& "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.train_resnet18 --config configs/resnet18.yaml`
+9. **M-03 Blocker Documented:** Siamese brand matcher is held pending acquisition of canonical brand logo assets for `data/brands/reference_gallery/`.
+
 ---
 
 ## 4. Pending Work (Master Plan)
 
-- **Phase 6:** Visual Core 1 & 2: ResNet screenshot classifier (unconditional) and Siamese brand visual matcher (conditional).
+- **Phase 6:** Visual Core 1 & 2: User manual execution of M-02 ResNet-18 training, followed by M-03 Siamese brand matcher once reference assets are acquired.
 - **Phase 7:** Visual Core 3 & 4: YOLO logo/UI detector, Faster R-CNN comparative benchmark, U-Net and YOLO-Seg segmentation.
 - **Phase 8:** LSTM and Transformer redirect sequence learning.
 - **Phase 9:** VAE latent-space experiments (GAN excluded).
@@ -168,4 +187,4 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
 
 - **Date:** 2026-11-22
 - **Command:** `pytest -q -m "not integration"`
-- **Result:** `210 passed, 1 deselected in 6.13s` (Exit Code 0). All anti-SSRF, scanner models, dataset processing, neural network math foundations, custom optimizers, lexical feature extractor, preprocessor, M-01 Lexical MLP, PSL domain extraction, Unicode homoglyphs, and typosquatting detection verified.
+- **Result:** `225 passed, 1 deselected in 13.19s` (Exit Code 0). All scanner models, anti-SSRF, math sandbox, custom optimizers, lexical intelligence, and ResNet-18 vision modules verified. Zero regressions.

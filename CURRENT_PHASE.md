@@ -1,56 +1,67 @@
 # CURRENT_PHASE.md — Active Phase Status
 
-**Active Phase:** Phase 5 — URL Intelligence, Homoglyph Detection, Typosquatting & MLP Baseline  
-**Phase Status:** COMPLETED  
+**Active Phase:** Phase 6.1 — Visual Core: ResNet-18 Screenshot Classifier Pipeline Implementation  
+**Phase Status:** IMPLEMENTATION & TESTING COMPLETE (TRAINING PENDING USER EXECUTION)  
 **Previous Phases:**
 - Phase 0: Project Blueprint, Requirements & Architecture (COMPLETED)
 - Phase 1 & 1.1: Scanner Implementation & Security Hardening (COMPLETED)
 - Phase 2: Dataset Acquisition, Brand Gallery & Partitioning (COMPLETED & COMMITTED in `56d8565`)
 - Phase 3: Neural Network Mathematical Sandbox from Scratch (COMPLETED & DOCUMENTED in [`docs/PHASE_3_MATH_FOUNDATIONS.md`](docs/PHASE_3_MATH_FOUNDATIONS.md))  
 - Phase 4: Optimizers, Ablations & Learning Algorithms from Scratch (COMPLETED & BENCHMARKED in `data/reports/optimizer_benchmark.json`)
-**Target Next Phase:** Phase 6 — Visual Core 1 & 2: ResNet Screenshot Classifier & Siamese Brand Matcher  
+- Phase 5: URL Intelligence, Homoglyph Detection, Typosquatting & MLP Baseline (COMPLETED & EVALUATED in `data/reports/lexical_mlp_evaluation.json`)
+**Target Next Milestone:** Manual Execution of M-02 ResNet-18 Training & Phase 6.2 (Siamese Brand Matcher upon brand asset availability)  
 **Timestamp:** 2026-11-22  
 
 ---
 
-## 1. Phase 5 Deliverables Matrix
+## 1. Phase 6.1 Deliverables Matrix (M-02 ResNet-18 Screenshot Classifier)
 
 | Deliverable | Specification | Implementation File | Verification & Test Results | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **PSL Domain Extractor** | Multi-label Public Suffix List parsing via `tldextract` with offline cache (`data/cache/tldextract`) | [`app/intelligence/url_domain/psl_extractor.py`](app/intelligence/url_domain/psl_extractor.py) | Verified for multi-part ccTLDs (`sbi.co.in`, `paypal.co.uk`), IPv4/IPv6 address literals, ports, subdomains (`sbi.co.in.attacker.com`), and IDN/Punycode. | PASSED |
-| **Unicode Homoglyph Detector** | Cross-script visual spoofing, IDN homographs, and confusable character detection | [`app/intelligence/url_domain/homoglyph.py`](app/intelligence/url_domain/homoglyph.py) | Verified on Cyrillic/Greek lookalikes (`pаypal.com`), mixed scripts, Punycode (`xn--googl-3we.com`), and legitimate single-script IDNs (`президент.рф`). | PASSED |
-| **Typosquatting & Brand Impersonation** | Levenshtein & Damerau-Levenshtein distances, normalized similarity, and brand comparison | [`app/intelligence/url_domain/typosquatting.py`](app/intelligence/url_domain/typosquatting.py) | Tested on official brand domains (`sbi.co.in`, `paypal.co.uk`), substitution (`sb1.co.in`), combosquatting (`sbi-secure-login-example.com`), and subdomain spoofing. | PASSED |
-| **Domain Intelligence Analyzer** | Unified engine producing structured evidence dataclass for multi-evidence risk fusion | [`app/intelligence/url_domain/analyzer.py`](app/intelligence/url_domain/analyzer.py) | Emits original/normalized hostnames, registrable domain, detected scripts, confusables, closest brand, and explainable summary. | PASSED |
-| **Lexical Feature Extractor** | 40 engineered numerical features (lengths, tokens, counts, Shannon entropy, brand cues) | [`app/intelligence/lexical.py`](app/intelligence/lexical.py) | Vectorized extraction over 32,157 URLs in ~1.3s; integrated with `PSLExtractor` and `DomainIntelligenceAnalyzer`. | PASSED |
-| **Standardization Preprocessor** | Zero-leakage standardization with outlier clipping | [`app/intelligence/preprocessing.py`](app/intelligence/preprocessing.py) | Fitted strictly on `X_train`. Zero leakage verified across validation and test partitions. Saved to `models/lexical/preprocessor.json`. | PASSED |
-| **Imbalance Strategy Comparison** | Strategy A (Balanced Batches + Ordinary BCE) vs Strategy B (Natural Batches + Weighted BCE) | [`scripts/train_lexical_model.py`](scripts/train_lexical_model.py) | Zero double-compensation. Selected Strategy B strictly on validation metrics (Val Macro F1: 0.6450 vs 0.5065). | PASSED |
-| **Lexical MLP (M-01)** | 3-Layer Perceptron: `Dense(40,64) -> ReLU -> Dense(64,32) -> ReLU -> Dense(32,1) -> Sigmoid` | [`app/intelligence/lexical_model.py`](app/intelligence/lexical_model.py) | Trained from scratch with custom Adam + Cosine Annealing LR and best-validation-checkpoint restoration (restored epoch 17, $\tau=0.050$). | PASSED |
-| **Holdout Evaluation** | Unseen domain-isolated test partition (4,257 records across 908 unseen domains) | [`scripts/train_lexical_model.py`](scripts/train_lexical_model.py) | **ROC-AUC: 0.9773**, **PR-AUC: 0.9995**, **Macro F1: 0.8239**, Phishing F1: 0.9932, Legit F1: 0.6545, Accuracy: 98.66%. Full report in `data/reports/lexical_mlp_evaluation.json`. | PASSED |
+| **Model Architecture** | ResNet-18 backbone with custom 2-class head: `AdaptiveAvgPool2d(1) -> Flatten -> Linear(512,128) -> ReLU -> Dropout(0.3) -> Linear(128,2)` | [`app/ml/vision/models.py`](app/ml/vision/models.py) | Tested synthetic forward/backward pass, tensor output shapes $(B, 2)$, class mapping `0: legitimate, 1: phishing`. | PASSED |
+| **Preprocessing & Transforms** | Configurable viewport cropping (`TopViewportCrop`, `AspectRatioPadResize`), ImageNet standardization, deterministic eval transforms | [`app/ml/vision/preprocessing.py`](app/ml/vision/preprocessing.py) | Tested top viewport 1:1 fold crop, aspect-ratio padding to 224x224, RGB conversion, and missing file exception handling. | PASSED |
+| **Dataset Loader** | `ScreenshotDataset` loading from parquet splits or DataFrame, dynamic class weight calculation $w_c = N / (2 \cdot N_c)$ | [`app/ml/vision/dataset.py`](app/ml/vision/dataset.py) | Verified on synthetic DataFrames and disk splits (`data/splits/visual/`: 624 train, 262 val, 114 test). | PASSED |
+| **Evaluation Metrics** | Accuracy, per-class Precision/Recall/F1, Macro/Weighted F1, Confusion Matrix, ROC-AUC, PR-AUC, single-class edge cases | [`app/ml/vision/evaluation.py`](app/ml/vision/evaluation.py) | Verified with perfect predictions, random predictions, and single-class edge case handling without exceptions. | PASSED |
+| **Training Pipeline** | `ResNet18Trainer` with AdamW, Cosine Annealing/StepLR, dynamic class-weighted CrossEntropyLoss, early stopping, best checkpoint restoration | [`app/ml/vision/trainer.py`](app/ml/vision/trainer.py) | Validated training mechanics with mock/unit tests. **CRITICAL RESTRICTION HONORED: Zero training epochs executed.** | PASSED (Ready to Train) |
+| **Inference Engine** | `ResNet18Inference` production engine restoring checkpoint weights and preprocessing config, predicting single images or batches | [`app/ml/vision/inference.py`](app/ml/vision/inference.py) | Verified checkpoint save/restore roundtrip, predict single, predict batch, and calibrated probabilities. | PASSED |
+| **Training CLI & Config** | Reproducible YAML config and CLI runner with command-line argument overrides | [`configs/resnet18.yaml`](configs/resnet18.yaml), [`app/ml/train_resnet18.py`](app/ml/train_resnet18.py) | Config syntax validated against Pydantic-like dataclass schema, CLI `--help` and argument parser verified. | PASSED |
+| **Unit Test Suite** | 15 targeted unit tests covering architecture, preprocessing, dataset loader, metrics, checkpointing, and inference | [`tests/test_resnet18.py`](tests/test_resnet18.py) | **15 passed in 9.90s**. Full suite: **225 passed in 13.19s** (0 regressions). | PASSED |
 
 ---
 
-## 2. Phase 5 Verification Test Suite (`tests/test_domain_intelligence.py`)
+## 2. Visual Dataset Verified Partitions (`data/splits/visual/`)
 
-All core test scenarios specified in `PHASE_ROADMAP.md` and phase requirements pass:
-- `sbi.co.in`: Extracted registrable domain `sbi.co.in`, verified as official brand domain (`is_official_brand_domain=True`, `is_suspicious_typosquat=False`).
-- `sb1.co.in`: Flagged as suspicious substitution typosquatting targeting `sbi` (Damerau-Levenshtein distance 1, `is_suspicious_typosquat=True`).
-- `sbi-secure-login-example.com`: Flagged as combosquatting embedding `sbi` with security keywords (`attack_type="combosquatting"`).
-- `sbi.co.in.attacker.com`: Extracted registrable domain `attacker.com` with `sbi.co.in` in subdomain; flagged as subdomain impersonation (`attack_type="subdomain_impersonation"`).
-- `paypal.co.uk`: Extracted registrable domain `paypal.co.uk`, verified as official PayPal brand domain (`is_official_brand_domain=True`).
-- `Cyrillic/Latin homoglyphs`: Detected confusable substitutions in `pаypal.com` and `xn--googl-3we.com` (`\u0435` Cyrillic e).
-- `Mixed-script domains`: Detected labels combining Latin with non-Latin scripts (`has_mixed_scripts=True`).
-- `Character transposition`: Detected swapped adjacent letters in `paypla.com` and `googel.com` (Damerau distance 1, Levenshtein distance 2).
-- `Character insertion & deletion`: Detected `paypaal.com` and `goggle.com` (insertion) and `paypl.com` and `gogle.com` (omission).
-- `Legitimate IDNs`: Pure Cyrillic domains (`президент.рф`) correctly classified without false positive mixed-script flags.
+| Partition | Total Samples | Phishing (`1`) | Legitimate (`0`) | Unique Domains | Class Imbalance Ratio | Split Integrity |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Train** (`train.parquet`) | 624 | 477 (76.4%) | 147 (23.6%) | 362 | 3.24 : 1 | 0 domain overlap with Val/Test |
+| **Validation** (`val.parquet`) | 262 | 236 (90.1%) | 26 (9.9%) | 76 | 9.08 : 1 | 0 domain overlap with Train/Test |
+| **Test** (`test.parquet`) | 114 | 87 (76.3%) | 27 (23.7%) | 79 | 3.22 : 1 | 0 domain overlap with Train/Val |
+| **Total Corpus** | 1,000 | 800 (80.0%) | 200 (20.0%) | 517 | 4.00 : 1 | 0 SHA256 or pHash duplicates |
 
 ---
 
-## 3. Phase 5 Exit Criteria & Quality Rules
+## 3. Execution Mandate & Manual Training Command
 
-- [x] **No PyTorch Optimizers in Scratch Pipeline:** All 4 optimizers, 3 schedulers, and the MLP training pipeline built from scratch using NumPy.
-- [x] **Hardened Domain Intelligence:** Public Suffix List parsing, Unicode script classification, confusable mapping, and Damerau-Levenshtein distance implemented with pure Python reproducibility.
-- [x] **Official Brand Protection:** Official domains for protected brands are strictly recognized and never falsely flagged as typosquatting attacks.
-- [x] **Explainable Output:** Domain intelligence engine returns structured evidence with script breakdown, confusables, closest brand, distance, and human-readable explanation (ready for Phase 10 Risk Fusion).
-- [x] **Zero Data Leakage:** Preprocessor fitted on training split only; threshold calibrated on validation split only; final metrics measured on holdout test partition.
-- [x] **Comprehensive Testing:** **210 unit tests passing in 4.76s** (1 deselected). Zero regressions.
-- [x] **No Scope Bleed:** ResNet, YOLO, Siamese CNN, and Transformer models remain isolated for later phases.
+In strict compliance with user instructions:
+- **NO training was executed.**
+- **NO training epochs or GPU workloads were started.**
+- **NO synthetic or fabricated metrics were generated.**
+
+### Exact Manual Training Command:
+To train the M-02 ResNet-18 classifier using the pre-configured environment, run:
+
+```powershell
+& "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.train_resnet18 --config configs/resnet18.yaml
+```
+
+To run with CLI overrides (e.g., using top-viewport crop, batch size 16, epochs 20):
+```powershell
+& "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.train_resnet18 --config configs/resnet18.yaml --epochs 20 --batch-size 16 --crop-strategy top_viewport
+```
+
+---
+
+## 4. Phase 6 Status & Blockers (M-03 Siamese Brand Matcher)
+
+- **M-02 (ResNet-18 Screenshot Classifier):** Complete, modular, fully tested, and waiting for manual execution.
+- **M-03 (Siamese Brand Visual Matcher):** BLOCKED pending brand reference image acquisition. Disk inspection revealed 0 image files in `data/brands/reference_gallery/` and no pair manifests. Scaffolding is deferred until assets are populated to avoid non-reproducible dummy training.
