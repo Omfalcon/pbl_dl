@@ -1,0 +1,23 @@
+{
+  "brand_id": "dhl",
+  "display_name": "DHL Express",
+  "category": "Logistics & Shipping",
+  "official_registrable_domains": [
+    "dhl.com",
+    "express.dhl"
+  ],
+  "authorized_subdomains": [
+    "mydhl.express.dhl",
+    "www.dhl.com"
+  ],
+  "synonyms": [
+    "dhl",
+    "dhl express",
+    "dhl tracking"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/dhl/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/dhl/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/dhl/canonical_screenshots/login_desktop.png"
+  }
+}

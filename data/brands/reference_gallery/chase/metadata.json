@@ -1,0 +1,24 @@
+{
+  "brand_id": "chase",
+  "display_name": "JPMorgan Chase Bank",
+  "category": "Banking & Financial Services",
+  "official_registrable_domains": [
+    "chase.com",
+    "jpmorganchase.com"
+  ],
+  "authorized_subdomains": [
+    "secure07ea.chase.com",
+    "chaseonline.chase.com"
+  ],
+  "synonyms": [
+    "chase",
+    "jpmorgan",
+    "chase bank",
+    "chase online"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/chase/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/chase/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/chase/canonical_screenshots/login_desktop.png"
+  }
+}

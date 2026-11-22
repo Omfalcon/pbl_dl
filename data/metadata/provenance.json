@@ -1,0 +1,99 @@
+[
+  {
+    "source_name": "OpenPhish",
+    "success": true,
+    "file_path": "data\\raw\\urls\\openphish_20261122.txt",
+    "file_size_bytes": 15093,
+    "sha256": "9d2f4617fa7f6aecc6d2bd23944580c79cb456f23d43b53526d2145a3fc91c2e",
+    "md5": "85227aff5d756ca00ca5490e85c21f47",
+    "records_count": 300,
+    "timestamp": "2026-11-22T06:58:13.244133+00:00",
+    "download_duration_sec": 2.83,
+    "error_message": null,
+    "extra_metadata": {
+      "feed_url": "https://openphish.com/feed.txt",
+      "active_date": "20261122"
+    }
+  },
+  {
+    "source_name": "PhishTank",
+    "success": true,
+    "file_path": "data\\raw\\urls\\phishtank_online_valid_20261122.csv",
+    "file_size_bytes": 8298375,
+    "sha256": "a59c884ab726116ac1c21adb5651d183b873d2502d9d41c709573bc9b1887538",
+    "md5": "3bc60730d29dfd31bca524d5f72c5aa1",
+    "records_count": 43044,
+    "timestamp": "2026-11-22T06:58:15.572995+00:00",
+    "download_duration_sec": 2.23,
+    "error_message": null,
+    "extra_metadata": {
+      "feed_url": "http://data.phishtank.com/data/online-valid.csv",
+      "active_date": "20261122"
+    }
+  },
+  {
+    "source_name": "Tranco",
+    "success": true,
+    "file_path": "data\\raw\\urls\\tranco_top_50000.csv",
+    "file_size_bytes": 1003533,
+    "sha256": "7cba20ec0bcab8439f50988ad41108e6c530aef2da8acfb68ca20a89163a5a86",
+    "md5": "e278801865f498d94a34fe753e5438e5",
+    "records_count": 50000,
+    "timestamp": "2026-11-22T06:58:17.094321+00:00",
+    "download_duration_sec": 1.27,
+    "error_message": null,
+    "extra_metadata": {
+      "feed_url": "https://tranco-list.eu/top-1m.csv.zip",
+      "top_n": 50000
+    }
+  },
+  {
+    "source_name": "Zenodo:8041387:brands.csv",
+    "success": true,
+    "file_path": "data\\raw\\metadata\\brands.csv",
+    "file_size_bytes": 16951,
+    "sha256": "038b324c03aff3c0003c44f88a8f41e16b549dd05bc31f79604b0266afffac61",
+    "md5": "4194175e26f89582dd0a641b34f897de",
+    "records_count": null,
+    "timestamp": "2026-11-22T06:58:18.836189+00:00",
+    "download_duration_sec": 1.72,
+    "error_message": null,
+    "extra_metadata": {
+      "zenodo_record_id": "8041387",
+      "doi": "10.5281/zenodo.8041387",
+      "title": "Phishing Website Dataset"
+    }
+  },
+  {
+    "source_name": "URLhaus",
+    "success": false,
+    "file_path": null,
+    "file_size_bytes": 0,
+    "sha256": null,
+    "md5": null,
+    "records_count": null,
+    "timestamp": "2026-11-22T06:58:18.845159+00:00",
+    "download_duration_sec": 0.0,
+    "error_message": "URLHAUS_AUTH_KEY is not set. abuse.ch keyless public exports are retired (HTTP 410 Gone). Please register a free personal key at https://auth.abuse.ch/ and set URLHAUS_AUTH_KEY in .env",
+    "extra_metadata": {
+      "auth_required": true,
+      "auth_portal": "https://auth.abuse.ch/"
+    }
+  },
+  {
+    "source_name": "PhreshPhish:train-000.parquet",
+    "success": true,
+    "file_path": "data\\raw\\urls\\phreshphish_train-000.parquet",
+    "file_size_bytes": 49639686,
+    "sha256": "9a9c693a95daeddb127c4446df4c5673b3f1a39e457ffe964b9849069bd739fe",
+    "md5": "872b154134d0a6d596a304770024acb5",
+    "records_count": 1000,
+    "timestamp": "2026-11-22T07:03:28.381417+00:00",
+    "download_duration_sec": 4.46,
+    "error_message": null,
+    "extra_metadata": {
+      "shard": "train-000.parquet",
+      "dataset": "phreshphish/phreshphish"
+    }
+  }
+]

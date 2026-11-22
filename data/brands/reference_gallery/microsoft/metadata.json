@@ -1,0 +1,29 @@
+{
+  "brand_id": "microsoft",
+  "display_name": "Microsoft Corporation",
+  "category": "Technology & Cloud",
+  "official_registrable_domains": [
+    "microsoft.com",
+    "live.com",
+    "office.com",
+    "microsoftonline.com",
+    "outlook.com"
+  ],
+  "authorized_subdomains": [
+    "login.microsoftonline.com",
+    "account.microsoft.com",
+    "login.live.com"
+  ],
+  "synonyms": [
+    "microsoft",
+    "office365",
+    "outlook",
+    "onedrive",
+    "azure"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/microsoft/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/microsoft/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/microsoft/canonical_screenshots/login_desktop.png"
+  }
+}

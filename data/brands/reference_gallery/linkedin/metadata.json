@@ -1,0 +1,20 @@
+{
+  "brand_id": "linkedin",
+  "display_name": "LinkedIn Corporation",
+  "category": "Professional Social Media",
+  "official_registrable_domains": [
+    "linkedin.com"
+  ],
+  "authorized_subdomains": [
+    "www.linkedin.com"
+  ],
+  "synonyms": [
+    "linkedin",
+    "linkedin login"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/linkedin/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/linkedin/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/linkedin/canonical_screenshots/login_desktop.png"
+  }
+}

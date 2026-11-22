@@ -1,0 +1,63 @@
+{
+  "corpus_overview": {
+    "total_records": 94125,
+    "unique_canonical_urls": 94125,
+    "unique_registrable_domains": 55364,
+    "legitimate_records": 50589,
+    "phishing_records": 43536,
+    "phishing_percentage": 46.25
+  },
+  "url_length_metrics": {
+    "min_length": 13,
+    "max_length": 3695,
+    "mean_length": 37.93,
+    "median_length": 23.0,
+    "std_length": 50.86
+  },
+  "top_phishing_targets": {
+    "Other": 39246,
+    "Allegro": 1065,
+    "Internal Revenue Service": 752,
+    "Facebook": 335,
+    "Amazon.com": 230,
+    "Microsoft": 214,
+    "other": 212,
+    "Optus": 115,
+    "Netflix": 77,
+    "Bradesco": 73,
+    "Adobe": 70,
+    "Comcast": 53,
+    "AT&amp;T": 43,
+    "Google": 41,
+    "facebook": 37
+  },
+  "source_breakdown": {
+    "Tranco": 49995,
+    "PhishTank": 42862,
+    "PhreshPhish": 977,
+    "OpenPhish": 291
+  },
+  "splits": {
+    "train": {
+      "records": 66828,
+      "unique_domains": 38754,
+      "legitimate": 35393,
+      "phishing": 31435,
+      "phishing_percentage": 47.04
+    },
+    "validation": {
+      "records": 10374,
+      "unique_domains": 8304,
+      "legitimate": 7602,
+      "phishing": 2772,
+      "phishing_percentage": 26.72
+    },
+    "test": {
+      "records": 16923,
+      "unique_domains": 8306,
+      "legitimate": 7594,
+      "phishing": 9329,
+      "phishing_percentage": 55.13
+    }
+  }
+}

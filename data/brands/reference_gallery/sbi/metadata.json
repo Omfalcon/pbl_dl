@@ -1,0 +1,26 @@
+{
+  "brand_id": "sbi",
+  "display_name": "State Bank of India",
+  "category": "Banking & Financial Services",
+  "official_registrable_domains": [
+    "sbi.co.in",
+    "onlinesbi.sbi",
+    "onlinesbi.com"
+  ],
+  "authorized_subdomains": [
+    "retail.onlinesbi.sbi",
+    "corporate.onlinesbi.sbi",
+    "retail.onlinesbi.com"
+  ],
+  "synonyms": [
+    "sbi",
+    "state bank of india",
+    "onlinesbi",
+    "yono"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/sbi/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/sbi/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/sbi/canonical_screenshots/login_desktop.png"
+  }
+}

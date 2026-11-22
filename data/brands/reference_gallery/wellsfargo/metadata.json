@@ -1,0 +1,22 @@
+{
+  "brand_id": "wellsfargo",
+  "display_name": "Wells Fargo & Company",
+  "category": "Banking & Financial Services",
+  "official_registrable_domains": [
+    "wellsfargo.com"
+  ],
+  "authorized_subdomains": [
+    "connect.secure.wellsfargo.com",
+    "www.wellsfargo.com"
+  ],
+  "synonyms": [
+    "wells fargo",
+    "wellsfargo",
+    "wf online"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/wellsfargo/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/wellsfargo/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/wellsfargo/canonical_screenshots/login_desktop.png"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "brand_id": "instagram",
+  "display_name": "Instagram",
+  "category": "Social Media",
+  "official_registrable_domains": [
+    "instagram.com"
+  ],
+  "authorized_subdomains": [
+    "www.instagram.com"
+  ],
+  "synonyms": [
+    "instagram",
+    "ig",
+    "insta"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/instagram/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/instagram/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/instagram/canonical_screenshots/login_desktop.png"
+  }
+}

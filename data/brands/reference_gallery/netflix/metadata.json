@@ -1,0 +1,21 @@
+{
+  "brand_id": "netflix",
+  "display_name": "Netflix Inc.",
+  "category": "Entertainment & Streaming",
+  "official_registrable_domains": [
+    "netflix.com"
+  ],
+  "authorized_subdomains": [
+    "www.netflix.com",
+    "help.netflix.com"
+  ],
+  "synonyms": [
+    "netflix",
+    "netflix streaming"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/netflix/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/netflix/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/netflix/canonical_screenshots/login_desktop.png"
+  }
+}

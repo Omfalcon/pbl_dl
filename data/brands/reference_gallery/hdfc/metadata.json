@@ -1,0 +1,22 @@
+{
+  "brand_id": "hdfc",
+  "display_name": "HDFC Bank",
+  "category": "Banking & Financial Services",
+  "official_registrable_domains": [
+    "hdfcbank.com"
+  ],
+  "authorized_subdomains": [
+    "netbanking.hdfcbank.com",
+    "www.hdfcbank.com"
+  ],
+  "synonyms": [
+    "hdfc",
+    "hdfc bank",
+    "hdfc netbanking"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/hdfc/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/hdfc/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/hdfc/canonical_screenshots/login_desktop.png"
+  }
+}

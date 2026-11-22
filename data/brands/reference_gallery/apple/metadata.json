@@ -1,0 +1,26 @@
+{
+  "brand_id": "apple",
+  "display_name": "Apple Inc.",
+  "category": "Technology & Consumer Electronics",
+  "official_registrable_domains": [
+    "apple.com",
+    "icloud.com"
+  ],
+  "authorized_subdomains": [
+    "appleid.apple.com",
+    "secure.apple.com",
+    "www.icloud.com"
+  ],
+  "synonyms": [
+    "apple",
+    "apple id",
+    "icloud",
+    "itunes",
+    "app store"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/apple/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/apple/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/apple/canonical_screenshots/login_desktop.png"
+  }
+}

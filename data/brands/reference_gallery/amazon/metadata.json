@@ -1,0 +1,27 @@
+{
+  "brand_id": "amazon",
+  "display_name": "Amazon.com Inc.",
+  "category": "E-Commerce & Cloud",
+  "official_registrable_domains": [
+    "amazon.com",
+    "amazon.in",
+    "amazon.co.uk",
+    "amazon.de"
+  ],
+  "authorized_subdomains": [
+    "www.amazon.com",
+    "sellercentral.amazon.com",
+    "pay.amazon.com"
+  ],
+  "synonyms": [
+    "amazon",
+    "amazon prime",
+    "amazon pay",
+    "aws"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/amazon/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/amazon/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/amazon/canonical_screenshots/login_desktop.png"
+  }
+}

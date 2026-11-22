@@ -1,0 +1,23 @@
+{
+  "brand_id": "adobe",
+  "display_name": "Adobe Inc.",
+  "category": "Technology & Software",
+  "official_registrable_domains": [
+    "adobe.com"
+  ],
+  "authorized_subdomains": [
+    "auth.services.adobe.com",
+    "account.adobe.com"
+  ],
+  "synonyms": [
+    "adobe",
+    "creative cloud",
+    "acrobat",
+    "adobe id"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/adobe/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/adobe/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/adobe/canonical_screenshots/login_desktop.png"
+  }
+}

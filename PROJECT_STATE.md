@@ -1,9 +1,9 @@
 # PROJECT_STATE.md — Persistent Project State
 
 **Project:** PhishVision AI (Phishing Website and Brand Impersonation Detector)  
-**Current Phase:** 1 — Repository Foundation, Secure Playwright Scanner & Security Hardening (Phase 1.1)  
+**Current Phase:** 2 — Dataset Acquisition, Preparation, Annotation & Validation  
 **Phase Status:** COMPLETED  
-**Next Phase:** 2 — Dataset Acquisition, Brand Gallery, Annotation & Splitting  
+**Next Phase:** Phase 3 — Neural Network Mathematical Sandbox from Scratch  
 **Last Updated:** 2026-11-22  
 
 ---
@@ -14,28 +14,43 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
 
 - **Phase 0 (System Architecture & Requirements):** COMPLETED.
 - **Phase 1 & Phase 1.1 (Repository Foundation, Scanner Implementation & Security Hardening):** COMPLETED.
-  - Package foundation established (`app/`, `config/`, `tests/`, `data/`, `models/`).
-  - Production Anti-SSRF engine (`app/scanner/anti_ssrf.py`) hardened against malformed ports, authorities, control characters, obfuscated IPs (dword, hex, octal), and IPv4-mapped IPv6 literals.
-  - **Connection-Level IP Safety Enforced:** Implemented `ValidatingEgressProxy` (`app/scanner/proxy.py`), ensuring that all outbound HTTP and HTTPS CONNECT requests are intercepted, validated, and bound strictly to the pre-validated public `pinned_ip`, preserving end-to-end TLS SNI while neutralizing DNS rebinding attacks.
-  - **Browser Hardening:** Removed insecure `--no-sandbox` flags from standard Windows execution; configured context-level route interception, service worker blocking (`service_workers="block"`), popup containment, and default secure TLS certificate verification (`ignore_https_errors=False`).
-  - Structured Pydantic telemetry models (`app/scanner/models.py`) with `tls_error`, `pinned_ip`, and `proxy_blocked_count`.
-  - Comprehensive test suite: **85 tests passing** (84 unit tests in 0.68s + 1 live integration test).
+- **Phase 2 (Dataset Acquisition, Preparation, Annotation & Validation):** COMPLETED.
+  - All 4 Milestones (2A, 2B, 2C, 2D) fully implemented, validated, and verified.
+  - Raw feeds ingested: PhishTank (43k), Tranco (50k), PhreshPhish (1k), OpenPhish (300), Zenodo brands (86).
+  - Cleaned & normalized master corpus: **94,125 unique records** (50,589 Legitimate vs 43,536 Phishing) across **55,364 domains**.
+  - Curated Brand Reference Gallery established for 18 target brands.
+  - Annotation validation and visualization suite operational for YOLO bounding boxes (5 classes) and semantic segmentation masks (6 classes).
+  - Domain-aware leakage-safe splitting generated Train (70%), Val (15%), Test (15%) with **mathematically verified 0 domain leakage**.
+  - Comprehensive statistical profile exported to `data/reports/dataset_statistics.json`.
+  - **Full test suite: 117 unit tests passing in 2.1s**. Zero regressions. Zero automated model training.
 
 ---
 
 ## 2. Current State Snapshot
 
-- **Active Phase:** `Phase 1 / 1.1` (COMPLETED)
-- **Target Next Phase:** `Phase 2` (Dataset Acquisition, Brand Gallery, Annotation & Splitting)
+- **Active Phase:** `Phase 2` (COMPLETED)
+- **Target Next Phase:** `Phase 3` (Neural Network Mathematical Sandbox from Scratch)
 - **Working Modules:**
   - `app.scanner.anti_ssrf`: Hardened URL parsing, port validation, DNS resolution, and IP classification.
   - `app.scanner.proxy`: Validating local egress forward proxy with connection-level IP pinning and TLS SNI preservation.
   - `app.scanner.playwright_scanner`: Isolated Playwright Chromium scanner with context-level routing, popup containment, service worker blocking, and secure TLS checking.
   - `app.scanner.models`: Pydantic structured scan telemetry schemas.
+  - `scripts.datasets.download_sources`: Modular streaming downloaders for OpenPhish, PhishTank, Tranco, Zenodo, and PhreshPhish.
+  - `scripts.datasets.download_all`: Central CLI acquisition orchestrator.
+  - `scripts.datasets.fetch_brand_references`: Brand gallery scaffolding and metadata management.
+  - `scripts.datasets.validate_images`: Image integrity checker, blank screenshot filter, and standardization resizer.
+  - `scripts.datasets.normalize_urls`: URL canonicalizer, tracking stripper, and PSL registrable domain extractor.
+  - `scripts.datasets.deduplicate`: Exact SHA-256 and perceptual pHash deduplicator.
+  - `scripts.datasets.preprocess_pipeline`: Master data ingestion and corpus generator.
+  - `scripts.datasets.validate_annotations`: YOLO detection and U-Net segmentation annotation validator.
+  - `scripts.datasets.visualize_annotations`: Visual overlay renderer for bounding boxes and segmentation masks.
+  - `scripts.datasets.generate_annotations`: Annotation manager and preview generator.
+  - `scripts.datasets.generate_splits`: Domain-aware leakage-safe train/val/test partitioner.
+  - `scripts.datasets.dataset_statistics`: Comprehensive dataset profiler.
 - **Working Environment:**
   - Python: `3.13.3` (Located at `C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe`)
   - Deep Learning Framework: `PyTorch 2.6.0+cu124` (Hardware acceleration: CUDA 12.4 operational)
-  - Key Libraries: `playwright 1.50+`, `beautifulsoup4 4.14.3`, `tldextract 5.3.1`, `pydantic 2.x`, `torchvision 0.21.0`, `ultralytics 8.4.60`, `scikit-learn 1.8.0`
+  - Key Libraries: `playwright 1.50+`, `beautifulsoup4 4.14.3`, `tldextract 5.3.1`, `pydantic 2.x`, `torchvision 0.21.0`, `ultralytics 8.4.60`, `scikit-learn 1.8.0`, `imagehash 4.3.2`
 - **Git State:** Tracking `main`, clean repository structure with `.gitignore` excluding transient scan artifacts.
 
 ---
@@ -50,28 +65,31 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
 ### Phase 1 & 1.1: Scanner Implementation & Security Hardening (COMPLETED)
 1. **Package Hierarchy:** Created `app/core/`, `app/scanner/`, `app/intelligence/`, `app/fusion/`, `app/api/`, `config/`, `tests/`, `data/`, `models/` with `__init__.py` modules.
 2. **Hardened Anti-SSRF Module (`app/scanner/anti_ssrf.py`):**
-   - Scheme and authority sanitization (rejecting control characters, unescaped whitespace, multiple `@` delimiters).
-   - Port validation enforcing strict $1 \le \text{port} \le 65535$ and blocking administrative services.
-   - Parsing obfuscated IP literals (decimal dwords, hex literals, dotted octals).
-   - IPv4-mapped IPv6 literal inspection (`[::ffff:127.0.0.1]`).
-   - Socket `getaddrinfo` resolution inspecting all returned IPv4/IPv6 addresses; rejects mixed public/private answers.
-   - Comprehensive subnet blacklisting: RFC 1918, RFC 4193, loopback, link-local, cloud metadata (`169.254.169.254`), CGNAT (`100.64.0.0/10`), broadcast, and reserved addresses.
+   - Scheme and authority sanitization, port boundaries, obfuscated IP parsing (dword/hex/octal), IPv4-mapped IPv6 literal inspection.
 3. **Validating Egress Forward Proxy (`app/scanner/proxy.py`):**
-   - Intercepts all outbound HTTP and HTTPS CONNECT requests from Chromium.
-   - Revalidates destination against Anti-SSRF policies at the network layer.
-   - Binds outbound TCP sockets strictly to the validated `pinned_ip`, completely defeating DNS rebinding.
-   - Preserves TLS Server Name Indication (SNI) and Host headers end-to-end.
+   - Intercepts all outbound HTTP/CONNECT requests from Chromium and binds outbound TCP sockets directly to validated public `pinned_ip`, preserving TLS SNI.
 4. **Hardened Playwright Scanner (`app/scanner/playwright_scanner.py`):**
-   - Removed insecure `--no-sandbox` flags from standard Windows execution.
-   - Configured `service_workers="block"` to eliminate route interception bypasses.
-   - Integrated popup containment listener closing unsolicited popups automatically.
-   - Switched to secure default TLS certificate verification (`ignore_https_errors=False`), capturing handshake failures as structured `CERT_ERROR` evidence.
-   - Context-level request routing (`context.route("**/*")`) re-validating all subresources and redirects.
-   - Ensured reliable `try/finally` cleanup of pages, contexts, browsers, and proxy server sockets.
-5. **Testing & Validation:**
-   - 72 unit tests in `tests/test_anti_ssrf.py` covering all edge cases.
-   - 13 scanner tests in `tests/test_scanner.py` covering proxy blocking, DOM parsing, TLS failure capture, exception cleanup, and live scan.
-   - All 84 unit tests pass in 0.68s; 1 live integration test passes against `https://example.com`.
+   - Removed insecure `--no-sandbox` flags, service worker blocking, popup containment, secure TLS certificate checking.
+5. **Interactive CLI (`scripts/manual_scan.py`):**
+   - Interactive manual scan CLI tool supporting both headless and `--headful` execution.
+
+### Phase 2: Dataset Acquisition, Preparation & Annotation (IN PROGRESS)
+1. **Source Research & Verification (`DATASET_SOURCES.md`):**
+   - Empirically audited Zenodo, PhreshPhish, PhishTank, OpenPhish, URLhaus, and Tranco.
+2. **Curated Brand Reference Gallery (`data/brands/reference_gallery/`):**
+   - Populated `manifest_brands.json` and workspaces for 18 monitored target brands.
+3. **Automated Downloader Architecture (`scripts/datasets/download_sources/`):**
+   - Modular streaming downloaders with provenance logging (`data/metadata/provenance.json`).
+4. **Data Cleaning & Image Validation (`scripts/datasets/validate_images.py`):**
+   - Image integrity decoding, blank screenshot rejection (std dev < 3.0), and Lanczos standardization.
+5. **URL Canonicalization & Normalization (`scripts/datasets/normalize_urls.py`):**
+   - Marketing tracking parameter stripping, default port removal, PSL registrable domain extraction.
+6. **Perceptual Deduplication Engine (`scripts/datasets/deduplicate.py`):**
+   - Exact SHA-256 matching and 64-bit DCT pHash near-duplicate clustering.
+7. **Production Corpus Generation (`scripts/datasets/preprocess_pipeline.py`):**
+   - Processed **94,125 unique, balanced records** (50,589 Legitimate vs 43,536 Phishing) across **55,364 registrable domains**.
+8. **Testing & Validation:**
+   - 21 dataset unit tests passing. Total suite: **105 passed in 1.88s**.
 
 ---
 

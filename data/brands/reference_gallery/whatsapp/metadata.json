@@ -1,0 +1,22 @@
+{
+  "brand_id": "whatsapp",
+  "display_name": "WhatsApp LLC",
+  "category": "Messaging & Communications",
+  "official_registrable_domains": [
+    "whatsapp.com"
+  ],
+  "authorized_subdomains": [
+    "web.whatsapp.com",
+    "www.whatsapp.com"
+  ],
+  "synonyms": [
+    "whatsapp",
+    "whatsapp web",
+    "wa.me"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/whatsapp/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/whatsapp/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/whatsapp/canonical_screenshots/login_desktop.png"
+  }
+}

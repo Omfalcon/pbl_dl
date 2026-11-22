@@ -1,0 +1,23 @@
+{
+  "brand_id": "paypal",
+  "display_name": "PayPal Inc.",
+  "category": "Banking & Payments",
+  "official_registrable_domains": [
+    "paypal.com",
+    "paypal-community.com"
+  ],
+  "authorized_subdomains": [
+    "www.paypal.com",
+    "login.paypal.com"
+  ],
+  "synonyms": [
+    "paypal",
+    "paypal inc",
+    "paypal account"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/paypal/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/paypal/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/paypal/canonical_screenshots/login_desktop.png"
+  }
+}

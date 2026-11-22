@@ -1,0 +1,242 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0",
+  "total_brands": 18,
+  "description": "Curated Visual Brand Reference Gallery for PhishVision AI Conditional Brand Impersonation Verification.",
+  "brands": [
+    {
+      "brand_id": "sbi",
+      "display_name": "State Bank of India",
+      "category": "Banking & Financial Services",
+      "official_registrable_domains": ["sbi.co.in", "onlinesbi.sbi", "onlinesbi.com"],
+      "authorized_subdomains": ["retail.onlinesbi.sbi", "corporate.onlinesbi.sbi", "retail.onlinesbi.com"],
+      "synonyms": ["sbi", "state bank of india", "onlinesbi", "yono"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/sbi/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/sbi/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/sbi/canonical_screenshots/login_desktop.png"
+      }
+    },
+    {
+      "brand_id": "hdfc",
+      "display_name": "HDFC Bank",
+      "category": "Banking & Financial Services",
+      "official_registrable_domains": ["hdfcbank.com"],
+      "authorized_subdomains": ["netbanking.hdfcbank.com", "www.hdfcbank.com"],
+      "synonyms": ["hdfc", "hdfc bank", "hdfc netbanking"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/hdfc/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/hdfc/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/hdfc/canonical_screenshots/login_desktop.png"
+      }
+    },
+    {
+      "brand_id": "paypal",
+      "display_name": "PayPal Inc.",
+      "category": "Banking & Payments",
+      "official_registrable_domains": ["paypal.com", "paypal-community.com"],
+      "authorized_subdomains": ["www.paypal.com", "login.paypal.com"],
+      "synonyms": ["paypal", "paypal inc", "paypal account"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/paypal/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/paypal/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/paypal/canonical_screenshots/login_desktop.png"
+      }
+    },
+    {
+      "brand_id": "microsoft",
+      "display_name": "Microsoft Corporation",
+      "category": "Technology & Cloud",
+      "official_registrable_domains": ["microsoft.com", "live.com", "office.com", "microsoftonline.com", "outlook.com"],
+      "authorized_subdomains": ["login.microsoftonline.com", "account.microsoft.com", "login.live.com"],
+      "synonyms": ["microsoft", "office365", "outlook", "onedrive", "azure"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/microsoft/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/microsoft/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/microsoft/canonical_screenshots/login_desktop.png"
+      }
+    },
+    {
+      "brand_id": "google",
+      "display_name": "Google LLC",
+      "category": "Technology & Cloud",
+      "official_registrable_domains": ["google.com", "youtube.com", "gmail.com"],
+      "authorized_subdomains": ["accounts.google.com", "mail.google.com", "myaccount.google.com"],
+      "synonyms": ["google", "gmail", "google account", "youtube", "google drive"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/google/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/google/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/google/canonical_screenshots/login_desktop.png"
+      }
+    },
+    {
+      "brand_id": "apple",
+      "display_name": "Apple Inc.",
+      "category": "Technology & Consumer Electronics",
+      "official_registrable_domains": ["apple.com", "icloud.com"],
+      "authorized_subdomains": ["appleid.apple.com", "secure.apple.com", "www.icloud.com"],
+      "synonyms": ["apple", "apple id", "icloud", "itunes", "app store"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/apple/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/apple/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/apple/canonical_screenshots/login_desktop.png"
+      }
+    },
+    {
+      "brand_id": "amazon",
+      "display_name": "Amazon.com Inc.",
+      "category": "E-Commerce & Cloud",
+      "official_registrable_domains": ["amazon.com", "amazon.in", "amazon.co.uk", "amazon.de"],
+      "authorized_subdomains": ["www.amazon.com", "sellercentral.amazon.com", "pay.amazon.com"],
+      "synonyms": ["amazon", "amazon prime", "amazon pay", "aws"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/amazon/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/amazon/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/amazon/canonical_screenshots/login_desktop.png"
+      }
+    },
+    {
+      "brand_id": "chase",
+      "display_name": "JPMorgan Chase Bank",
+      "category": "Banking & Financial Services",
+      "official_registrable_domains": ["chase.com", "jpmorganchase.com"],
+      "authorized_subdomains": ["secure07ea.chase.com", "chaseonline.chase.com"],
+      "synonyms": ["chase", "jpmorgan", "chase bank", "chase online"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/chase/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/chase/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/chase/canonical_screenshots/login_desktop.png"
+      }
+    },
+    {
+      "brand_id": "wellsfargo",
+      "display_name": "Wells Fargo & Company",
+      "category": "Banking & Financial Services",
+      "official_registrable_domains": ["wellsfargo.com"],
+      "authorized_subdomains": ["connect.secure.wellsfargo.com", "www.wellsfargo.com"],
+      "synonyms": ["wells fargo", "wellsfargo", "wf online"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/wellsfargo/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/wellsfargo/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/wellsfargo/canonical_screenshots/login_desktop.png"
+      }
+    },
+    {
+      "brand_id": "netflix",
+      "display_name": "Netflix Inc.",
+      "category": "Entertainment & Streaming",
+      "official_registrable_domains": ["netflix.com"],
+      "authorized_subdomains": ["www.netflix.com", "help.netflix.com"],
+      "synonyms": ["netflix", "netflix streaming"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/netflix/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/netflix/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/netflix/canonical_screenshots/login_desktop.png"
+      }
+    },
+    {
+      "brand_id": "facebook",
+      "display_name": "Meta Platforms / Facebook",
+      "category": "Social Media",
+      "official_registrable_domains": ["facebook.com", "fb.com", "meta.com"],
+      "authorized_subdomains": ["www.facebook.com", "login.facebook.com", "m.facebook.com"],
+      "synonyms": ["facebook", "meta", "fb", "meta business"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/facebook/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/facebook/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/facebook/canonical_screenshots/login_desktop.png"
+      }
+    },
+    {
+      "brand_id": "instagram",
+      "display_name": "Instagram",
+      "category": "Social Media",
+      "official_registrable_domains": ["instagram.com"],
+      "authorized_subdomains": ["www.instagram.com"],
+      "synonyms": ["instagram", "ig", "insta"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/instagram/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/instagram/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/instagram/canonical_screenshots/login_desktop.png"
+      }
+    },
+    {
+      "brand_id": "whatsapp",
+      "display_name": "WhatsApp LLC",
+      "category": "Messaging & Communications",
+      "official_registrable_domains": ["whatsapp.com"],
+      "authorized_subdomains": ["web.whatsapp.com", "www.whatsapp.com"],
+      "synonyms": ["whatsapp", "whatsapp web", "wa.me"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/whatsapp/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/whatsapp/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/whatsapp/canonical_screenshots/login_desktop.png"
+      }
+    },
+    {
+      "brand_id": "bofa",
+      "display_name": "Bank of America",
+      "category": "Banking & Financial Services",
+      "official_registrable_domains": ["bankofamerica.com", "bofa.com"],
+      "authorized_subdomains": ["secure.bankofamerica.com", "www.bankofamerica.com"],
+      "synonyms": ["bank of america", "bofa", "boa", "merrill lynch"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/bofa/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/bofa/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/bofa/canonical_screenshots/login_desktop.png"
+      }
+    },
+    {
+      "brand_id": "dhl",
+      "display_name": "DHL Express",
+      "category": "Logistics & Shipping",
+      "official_registrable_domains": ["dhl.com", "express.dhl"],
+      "authorized_subdomains": ["mydhl.express.dhl", "www.dhl.com"],
+      "synonyms": ["dhl", "dhl express", "dhl tracking"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/dhl/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/dhl/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/dhl/canonical_screenshots/login_desktop.png"
+      }
+    },
+    {
+      "brand_id": "fedex",
+      "display_name": "FedEx Corporation",
+      "category": "Logistics & Shipping",
+      "official_registrable_domains": ["fedex.com"],
+      "authorized_subdomains": ["www.fedex.com", "tracking.fedex.com"],
+      "synonyms": ["fedex", "fedex express", "fedex tracking"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/fedex/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/fedex/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/fedex/canonical_screenshots/login_desktop.png"
+      }
+    },
+    {
+      "brand_id": "linkedin",
+      "display_name": "LinkedIn Corporation",
+      "category": "Professional Social Media",
+      "official_registrable_domains": ["linkedin.com"],
+      "authorized_subdomains": ["www.linkedin.com"],
+      "synonyms": ["linkedin", "linkedin login"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/linkedin/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/linkedin/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/linkedin/canonical_screenshots/login_desktop.png"
+      }
+    },
+    {
+      "brand_id": "adobe",
+      "display_name": "Adobe Inc.",
+      "category": "Technology & Software",
+      "official_registrable_domains": ["adobe.com"],
+      "authorized_subdomains": ["auth.services.adobe.com", "account.adobe.com"],
+      "synonyms": ["adobe", "creative cloud", "acrobat", "adobe id"],
+      "assets": {
+        "primary_logo": "data/brands/reference_gallery/adobe/logos/logo_primary.png",
+        "icon": "data/brands/reference_gallery/adobe/logos/logo_icon.png",
+        "canonical_login": "data/brands/reference_gallery/adobe/canonical_screenshots/login_desktop.png"
+      }
+    }
+  ]
+}

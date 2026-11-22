@@ -1,0 +1,24 @@
+{
+  "brand_id": "bofa",
+  "display_name": "Bank of America",
+  "category": "Banking & Financial Services",
+  "official_registrable_domains": [
+    "bankofamerica.com",
+    "bofa.com"
+  ],
+  "authorized_subdomains": [
+    "secure.bankofamerica.com",
+    "www.bankofamerica.com"
+  ],
+  "synonyms": [
+    "bank of america",
+    "bofa",
+    "boa",
+    "merrill lynch"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/bofa/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/bofa/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/bofa/canonical_screenshots/login_desktop.png"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-11-22T07:25:16Z",
+  "duration_seconds": 3.41,
+  "urls": {
+    "raw_ingested": 94344,
+    "unique_retained": 94125,
+    "exact_duplicates_removed": 219,
+    "unique_registrable_domains": 55364,
+    "class_distribution": {
+      "Legitimate": 50589,
+      "Phishing": 43536
+    },
+    "output_parquet": "data\\processed\\urls\\corpus_normalized.parquet",
+    "output_csv": "data\\processed\\urls\\corpus_normalized.csv"
+  },
+  "images": {
+    "total_scanned": 8,
+    "valid_retained": 4,
+    "corrupt_dropped": 0,
+    "blank_dropped": 0,
+    "exact_duplicate_images_removed": 2,
+    "near_duplicate_images_removed": 2
+  }
+}

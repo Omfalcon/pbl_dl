@@ -1,0 +1,27 @@
+{
+  "brand_id": "google",
+  "display_name": "Google LLC",
+  "category": "Technology & Cloud",
+  "official_registrable_domains": [
+    "google.com",
+    "youtube.com",
+    "gmail.com"
+  ],
+  "authorized_subdomains": [
+    "accounts.google.com",
+    "mail.google.com",
+    "myaccount.google.com"
+  ],
+  "synonyms": [
+    "google",
+    "gmail",
+    "google account",
+    "youtube",
+    "google drive"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/google/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/google/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/google/canonical_screenshots/login_desktop.png"
+  }
+}

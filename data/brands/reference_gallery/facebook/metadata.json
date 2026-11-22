@@ -1,0 +1,26 @@
+{
+  "brand_id": "facebook",
+  "display_name": "Meta Platforms / Facebook",
+  "category": "Social Media",
+  "official_registrable_domains": [
+    "facebook.com",
+    "fb.com",
+    "meta.com"
+  ],
+  "authorized_subdomains": [
+    "www.facebook.com",
+    "login.facebook.com",
+    "m.facebook.com"
+  ],
+  "synonyms": [
+    "facebook",
+    "meta",
+    "fb",
+    "meta business"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/facebook/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/facebook/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/facebook/canonical_screenshots/login_desktop.png"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "brand_id": "fedex",
+  "display_name": "FedEx Corporation",
+  "category": "Logistics & Shipping",
+  "official_registrable_domains": [
+    "fedex.com"
+  ],
+  "authorized_subdomains": [
+    "www.fedex.com",
+    "tracking.fedex.com"
+  ],
+  "synonyms": [
+    "fedex",
+    "fedex express",
+    "fedex tracking"
+  ],
+  "assets": {
+    "primary_logo": "data/brands/reference_gallery/fedex/logos/logo_primary.png",
+    "icon": "data/brands/reference_gallery/fedex/logos/logo_icon.png",
+    "canonical_login": "data/brands/reference_gallery/fedex/canonical_screenshots/login_desktop.png"
+  }
+}
