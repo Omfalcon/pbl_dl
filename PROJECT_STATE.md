@@ -23,16 +23,32 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
   - Annotation validation and visualization suite operational for YOLO bounding boxes (independent box evaluation) and semantic segmentation masks (`SegmentationMaskManager` for image-mask pairing).
   - Domain-aware leakage-safe splitting generated:
     - URL Splits: Train (32,157 records), Val (7,715 records), Test (4,257 records) with **0 domain leakage**.
-    - Visual Splits: Train (547 screenshots), Val (274 screenshots), Test (179 screenshots) with **0 domain leakage**.
+    - Visual Splits: Train (624 screenshots), Val (262 screenshots), Test (114 screenshots) with **0 domain leakage, 0 exact duplicate leakage, and 0 near-duplicate leakage**.
   - Comprehensive statistical profile exported to `data/reports/dataset_statistics.json`.
-  - **Full test suite: 131 unit tests passing in ~5.4s**. Zero regressions. Zero automated model training.
+  - **Phase 2 Committed in git:** `56d8565` (`feat(dataset): finalize Phase 2 visual dataset integration`).
+- **Phase 3 (Neural Network Mathematical Sandbox from Scratch):** COMPLETED.
+  - Linear algebra primitives (dot product, norms, matrix multiply, cosine similarity).
+  - Activations & analytical derivatives (ReLU, Sigmoid, Tanh, Softmax).
+  - Loss functions & gradients (MSE, Binary Cross Entropy with stability clamping).
+  - Single artificial neuron with analytic forward/backward propagation.
+  - Fully vectorized Dense layer with Xavier/He initialization and backpropagation.
+  - Sequential multi-layer MLP pipeline.
+  - Dynamic reverse-mode automatic differentiation computational graph.
+  - Central finite differences numerical gradient checker (asserting relative error $< 10^{-6}$).
+  - Full mathematical documentation published in `docs/PHASE_3_MATH_FOUNDATIONS.md`.
+- **Phase 4 (Feedforward Deep Neural Network for Lexical Phishing Detection):** IN PROGRESS.
+  - Implemented 4 custom optimizers from scratch: SGD, SGD with Momentum, RMSProp, and Adam (`app/ml/from_scratch/optimizers.py`).
+  - Implemented 3 learning rate schedulers: StepLR, ExponentialLR, and CosineAnnealingLR.
+  - Verified updates against hand-calculated analytical values and proven convergence on regression & classification.
+  - Optimizer convergence benchmark exported to `data/reports/optimizer_benchmark.json`.
+  - **Full test suite: 156 unit tests passing in ~4.8s**. Zero regressions.
 
 ---
 
 ## 2. Current State Snapshot
 
-- **Active Phase:** `Phase 2` (COMPLETED)
-- **Target Next Phase:** `Phase 3` (Neural Network Mathematical Sandbox from Scratch)
+- **Active Phase:** `Phase 4` (Feedforward Deep Neural Network for Lexical Phishing Detection)
+- **Target Next Phase:** `Phase 5` (Lexical Feature Extraction Pipeline & MLP Training)
 - **Working Modules:**
   - `app.scanner.anti_ssrf`: Hardened URL parsing, port validation, DNS resolution, and IP classification.
   - `app.scanner.proxy`: Validating local egress forward proxy with connection-level IP pinning and TLS SNI preservation.
