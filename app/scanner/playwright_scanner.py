@@ -281,7 +281,7 @@ class PlaywrightScanner:
             async with async_playwright() as p:
                 launch_args = _get_browser_launch_args()
                 browser = await p.chromium.launch(
-                    headless=True,
+                    headless=opts.headless,
                     args=launch_args,
                     proxy=proxy_config,
                 )

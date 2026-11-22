@@ -64,6 +64,7 @@ class ScanOptions(BaseModel):
     viewport_width: int = Field(default=1280, ge=320, le=3840)
     viewport_height: int = Field(default=720, ge=240, le=2160)
     timeout_seconds: int = Field(default=15, ge=3, le=60)
+    headless: bool = Field(default=True, description="Run browser in headless mode")
     capture_full_page: bool = Field(default=True)
     user_agent: str | None = Field(default=None)
     extract_scripts: bool = Field(default=True)
