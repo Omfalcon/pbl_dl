@@ -41,5 +41,5 @@
 - [x] **Hardened Optimizer Safety:** Input length validation, tensor shape validation, gradient finiteness checks, and synchronized scheduler learning rates.
 - [x] **Hand-Calculated Precision:** Step updates verified against deterministic analytical proofs.
 - [x] **Empirical Convergence:** All optimizers achieve $\ge 95\%$ accuracy on synthetic classification.
-- [x] **Comprehensive Testing:** 15 optimizer unit tests passing; 156 total project unit tests passing.
+- [x] **Comprehensive Testing:** 20 optimizer unit tests passing; 167 total project unit tests passing in 6.39s (1 deselected).
 - [x] **No Scope Bleed:** ResNet, YOLO, Siamese CNN, and Transformer models remain isolated for later phases.
