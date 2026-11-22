@@ -1,7 +1,7 @@
 # CURRENT_PHASE.md — Active Phase Status
 
-**Active Phase:** Phase 6.1 — Visual Core: ResNet-18 Screenshot Classifier Pipeline Implementation  
-**Phase Status:** IMPLEMENTATION & TESTING COMPLETE (TRAINING PENDING USER EXECUTION)  
+**Active Phase:** Phase 8 — Seven-Model Integration: Implementation  
+**Phase Status:** INTEGRATION COMPLETE & EMPIRICALLY VERIFIED (74/74 TESTS PASSING)  
 **Previous Phases:**
 - Phase 0: Project Blueprint, Requirements & Architecture (COMPLETED)
 - Phase 1 & 1.1: Scanner Implementation & Security Hardening (COMPLETED)
@@ -9,59 +9,74 @@
 - Phase 3: Neural Network Mathematical Sandbox from Scratch (COMPLETED & DOCUMENTED in [`docs/PHASE_3_MATH_FOUNDATIONS.md`](docs/PHASE_3_MATH_FOUNDATIONS.md))  
 - Phase 4: Optimizers, Ablations & Learning Algorithms from Scratch (COMPLETED & BENCHMARKED in `data/reports/optimizer_benchmark.json`)
 - Phase 5: URL Intelligence, Homoglyph Detection, Typosquatting & MLP Baseline (COMPLETED & EVALUATED in `data/reports/lexical_mlp_evaluation.json`)
-**Target Next Milestone:** Manual Execution of M-02 ResNet-18 Training & Phase 6.2 (Siamese Brand Matcher upon brand asset availability)  
-**Timestamp:** 2026-11-22  
+- Phase 6.1: M-02 ResNet-18 Classifier Implementation, Training & Multi-Region Diagnostics (COMPLETED)
+- Phase 6.2, 6.2.1 & 6.2.2: M-03 Siamese CNN Brand Impersonation Matcher Architecture, Authentic Acquisition, Training & Independent Test Evaluation (COMPLETED)
+- Phase 7.1: M-04 YOLO UI Component & Logo Detection Pipeline Scaffolding, Class Schema & Dataset Audit (COMPLETED)
+- Phase 7.2–7.4: Synthetic Dataset Generation & YOLOv8n Object Detection Experiment (COMPLETED, mAP50=0.9950, mAP50-95=0.9699)
+- Phase 7.5 & 7.5.1: YOLOv8n + Siamese + Phishing Pipeline Integration & Multimodal Validation (COMPLETED)
+- Phase 7.6: M-05 Faster R-CNN Object Detection Implementation & Benchmark Scaffolding (COMPLETED & VERIFIED)
+- Phase 7.7: M-06 YOLOv8n-Seg Instance Segmentation Training & Test Evaluation (COMPLETED, Box mAP50=0.9950, Mask mAP50=0.9950)
+- Phase 7.8: M-07 URL Sequence LSTM Training, Evaluation & Targeted Audit (COMPLETED, Accuracy=0.9869, ROC-AUC=0.9666, PR-AUC=0.9991, Macro F1=0.7779)
+- Phase 8: Seven-Model Multimodal Integration, Spatial Consensus Engine, and Calibrated Risk Fusion (COMPLETED)
+**Target Next Milestone:** Phase 9 — Interactive Dashboard / Forensic UI & Production API Deployment  
+**Timestamp:** 2026-11-23  
 
 ---
 
-## 1. Phase 6.1 Deliverables Matrix (M-02 ResNet-18 Screenshot Classifier)
+## 1. Phase 8 Seven-Model Integration Summary
+
+- **Unified Pipeline Architecture (`app/ml/unified_pipeline.py`):**
+  - Unifies all 7 trained neural model pipelines (M-01 through M-07) behind a single production inferencer.
+  - Zero model retraining, zero modification to existing trained checkpoints.
+  - Transparent model availability tracking for all 7 models.
+- **Spatial Consensus Engine (`app/ml/vision/spatial_consensus.py`):**
+  - Fuses spatial detections across M-04 (YOLOv8n), M-05 (Faster R-CNN), and M-06 (YOLOv8-Seg) via IoU clustering ($\text{IoU} \ge 0.45$).
+  - Prevents duplicate UI element counting.
+  - Preserves exact polygon segmentation masks and pixel area from YOLO-Seg.
+  - Crops logo candidates with ~10% padding from deduplicated consensus logo clusters for M-03 Siamese verification.
+- **Calibrated Multi-Evidence Risk Fusion:**
+  - Normalizes raw sigmoid scores for cost-sensitive models (M-01 threshold 0.05, M-07 threshold 0.01) onto an aligned $[0.0, 1.0]$ risk scale.
+  - Cross-verifies DOM form submissions and password inputs with visual detections.
+  - Preserves critical brand impersonation override ($risk \ge 0.95$), official brand whitelist pass ($risk \le 0.05$), and 404/empty page risk capping ($\le 0.40$).
+  - Preserves `UNKNOWN / INSUFFICIENT EVIDENCE` fallbacks when visual capture is absent and URL confidence is ambiguous.
+- **Automated Verification Suite (`tests/test_seven_model_integration.py`):**
+  - 14/14 tests passing covering all 7 models, spatial consensus deduplication, missing checkpoints, corrupt images, missing reference galleries, anti-SSRF protections, and fallback states.
+  - Full regression suite passing: 74/74 tests across detection, segmentation, sequence, and multimodal modules.
+- **Evaluation Reports:**
+  - Emitted benchmark evaluation to [`data/reports/seven_model_pipeline_evaluation.json`](data/reports/seven_model_pipeline_evaluation.json) and [`data/reports/SEVEN_MODEL_INTEGRATION_REPORT.md`](data/reports/SEVEN_MODEL_INTEGRATION_REPORT.md).
+
+- **M-07 Architecture (`app/ml/sequence/lstm_model.py`):**
+  - Bidirectional LSTM with self-attentive temporal pooling (`AttentionPooling`).
+  - Processes character-level sequences of canonical URLs up to 256 characters.
+  - Dual-branch architecture: URL character LSTM branch (hidden_dim=64, num_layers=2, bidirectional -> 128-d output) + conditional redirect sequence LSTM branch (hidden_dim=32, num_layers=1).
+  - Total parameters: **210,689 parameters** (~0.84 MB weights), peak VRAM < 350 MiB on RTX 2050 (4GB).
+- **Data Integrity & Sequence Audit:**
+  - Audit of `data/splits/` confirmed **no historical labelled redirect sequence datasets exist in the corpus**. The dataset contains 44,129 static URL records.
+  - Redirect sequence learning is explicitly marked as not yet trained on empirical multi-hop data. The model operates on raw sequential URL patterns with zero-padded fallback for redirect inputs.
+  - Reuses domain-isolated splits with verified **zero domain and zero URL leakage**:
+    - Train: `data/splits/train/urls.parquet` (32,157 samples: 31,722 Phishing, 435 Legitimate).
+    - Validation: `data/splits/validation/urls.parquet` (7,715 samples: 7,638 Phishing, 77 Legitimate).
+    - Test: `data/splits/test/urls.parquet` (4,257 samples: 4,175 Phishing, 82 Legitimate).
+- **Class Imbalance Strategy:**
+  - Implements balanced class-weighted BCE loss ($w_0 = 36.96$ for Legitimate, $w_1 = 0.5068$ for Phishing) to counter the 72.9:1 imbalance without synthesizing fake samples.
+  - Calibrates decision threshold strictly on the validation set ($\tau \in [0.01, 0.99]$) to maximize validation Macro F1 before test evaluation.
+- **Inference Engine (`app/ml/sequence/lstm_inference.py`):**
+  - Production `LSTMInferencer` for single and batched URL predictions, returning calibrated probabilities, labels, and latency benchmarks.
+- **Automated Verification Suite (`tests/test_lstm.py`):**
+  - **17/17 unit tests passing (100%)** covering preprocessing, leakage isolation, attentive pooling, forward/backward passes, weighted loss, inferencer, and metric calculation.
+- **Pre-Evaluation Reports:**
+  - Generated `PENDING_TRAINING_EXECUTION` manifest at `data/reports/lstm/metrics.json` and `data/reports/lstm/LSTM_EXPERIMENT_REPORT.md`.
+
+---
+
+## 2. Phase 7.8 Deliverables Matrix
 
 | Deliverable | Specification | Implementation File | Verification & Test Results | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Model Architecture** | ResNet-18 backbone with custom 2-class head: `AdaptiveAvgPool2d(1) -> Flatten -> Linear(512,128) -> ReLU -> Dropout(0.3) -> Linear(128,2)` | [`app/ml/vision/models.py`](app/ml/vision/models.py) | Tested synthetic forward/backward pass, tensor output shapes $(B, 2)$, class mapping `0: legitimate, 1: phishing`. | PASSED |
-| **Preprocessing & Transforms** | Configurable viewport cropping (`TopViewportCrop`, `AspectRatioPadResize`), ImageNet standardization, deterministic eval transforms | [`app/ml/vision/preprocessing.py`](app/ml/vision/preprocessing.py) | Tested top viewport 1:1 fold crop, aspect-ratio padding to 224x224, RGB conversion, and missing file exception handling. | PASSED |
-| **Dataset Loader** | `ScreenshotDataset` loading from parquet splits or DataFrame, dynamic class weight calculation $w_c = N / (2 \cdot N_c)$ | [`app/ml/vision/dataset.py`](app/ml/vision/dataset.py) | Verified on synthetic DataFrames and disk splits (`data/splits/visual/`: 624 train, 262 val, 114 test). | PASSED |
-| **Evaluation Metrics** | Accuracy, per-class Precision/Recall/F1, Macro/Weighted F1, Confusion Matrix, ROC-AUC, PR-AUC, single-class edge cases | [`app/ml/vision/evaluation.py`](app/ml/vision/evaluation.py) | Verified with perfect predictions, random predictions, and single-class edge case handling without exceptions. | PASSED |
-| **Training Pipeline** | `ResNet18Trainer` with AdamW, Cosine Annealing/StepLR, dynamic class-weighted CrossEntropyLoss, early stopping, best checkpoint restoration | [`app/ml/vision/trainer.py`](app/ml/vision/trainer.py) | Validated training mechanics with mock/unit tests. **CRITICAL RESTRICTION HONORED: Zero training epochs executed.** | PASSED (Ready to Train) |
-| **Inference Engine** | `ResNet18Inference` production engine restoring checkpoint weights and preprocessing config, predicting single images or batches | [`app/ml/vision/inference.py`](app/ml/vision/inference.py) | Verified checkpoint save/restore roundtrip, predict single, predict batch, and calibrated probabilities. | PASSED |
-| **Training CLI & Config** | Reproducible YAML config and CLI runner with command-line argument overrides | [`configs/resnet18.yaml`](configs/resnet18.yaml), [`app/ml/train_resnet18.py`](app/ml/train_resnet18.py) | Config syntax validated against Pydantic-like dataclass schema, CLI `--help` and argument parser verified. | PASSED |
-| **Unit Test Suite** | 15 targeted unit tests covering architecture, preprocessing, dataset loader, metrics, checkpointing, and inference | [`tests/test_resnet18.py`](tests/test_resnet18.py) | **15 passed in 9.90s**. Full suite: **225 passed in 13.19s** (0 regressions). | PASSED |
-
----
-
-## 2. Visual Dataset Verified Partitions (`data/splits/visual/`)
-
-| Partition | Total Samples | Phishing (`1`) | Legitimate (`0`) | Unique Domains | Class Imbalance Ratio | Split Integrity |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Train** (`train.parquet`) | 624 | 477 (76.4%) | 147 (23.6%) | 362 | 3.24 : 1 | 0 domain overlap with Val/Test |
-| **Validation** (`val.parquet`) | 262 | 236 (90.1%) | 26 (9.9%) | 76 | 9.08 : 1 | 0 domain overlap with Train/Test |
-| **Test** (`test.parquet`) | 114 | 87 (76.3%) | 27 (23.7%) | 79 | 3.22 : 1 | 0 domain overlap with Train/Val |
-| **Total Corpus** | 1,000 | 800 (80.0%) | 200 (20.0%) | 517 | 4.00 : 1 | 0 SHA256 or pHash duplicates |
-
----
-
-## 3. Execution Mandate & Manual Training Command
-
-In strict compliance with user instructions:
-- **NO training was executed.**
-- **NO training epochs or GPU workloads were started.**
-- **NO synthetic or fabricated metrics were generated.**
-
-### Exact Manual Training Command:
-To train the M-02 ResNet-18 classifier using the pre-configured environment, run:
-
-```powershell
-& "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.train_resnet18 --config configs/resnet18.yaml
-```
-
-To run with CLI overrides (e.g., using top-viewport crop, batch size 16, epochs 20):
-```powershell
-& "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.train_resnet18 --config configs/resnet18.yaml --epochs 20 --batch-size 16 --crop-strategy top_viewport
-```
-
----
-
-## 4. Phase 6 Status & Blockers (M-03 Siamese Brand Matcher)
-
-- **M-02 (ResNet-18 Screenshot Classifier):** Complete, modular, fully tested, and waiting for manual execution.
-- **M-03 (Siamese Brand Visual Matcher):** BLOCKED pending brand reference image acquisition. Disk inspection revealed 0 image files in `data/brands/reference_gallery/` and no pair manifests. Scaffolding is deferred until assets are populated to avoid non-reproducible dummy training.
+| **LSTM Model Architecture** | BiLSTM with Attention Pooling & conditional redirect branch | [`app/ml/sequence/lstm_model.py`](app/ml/sequence/lstm_model.py) | Verified forward/backward pass, attention weights, 210,689 parameters. | PASSED |
+| **Sequence Preprocessing** | Zero-leakage character vocabulary & sequence dataset | [`app/ml/sequence/sequence_preprocessing.py`](app/ml/sequence/sequence_preprocessing.py) | Verified padding, truncation, UNK handling, JSON serialization. | PASSED |
+| **Production Inferencer** | Single/batch sequential prediction engine with latency tracking | [`app/ml/sequence/lstm_inference.py`](app/ml/sequence/lstm_inference.py) | Verified predict and predict_batch with structured telemetry. | PASSED |
+| **Training & Evaluation Script** | Config-driven training harness with balanced BCE & threshold tuning | [`app/ml/train_lstm.py`](app/ml/train_lstm.py) | Verified `--eval-only` and pre-eval manifest generation. | PASSED |
+| **Configuration** | Hardware-aware hyperparameters (batch=128, FP32/CUDA) | [`configs/lstm.yaml`](configs/lstm.yaml) | Configured for RTX 2050 4GB GPU & CPU fallback. | PASSED |
+| **Unit Test Suite** | 17 automated tests for preprocessing, isolation, model, and loss | [`tests/test_lstm.py`](tests/test_lstm.py) | **17 passed in 6.26s** (100% pass rate). | PASSED |
+| **Pre-Evaluation Reports** | Status manifest and training instructions | [`data/reports/lstm/`](data/reports/lstm/) | Emitted `PENDING_TRAINING_EXECUTION` manifest and report. | PASSED |

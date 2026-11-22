@@ -16,8 +16,8 @@
 | **Tranco Candidate URLs** | **50,000** | 0 (Isolated) | 50,000 | `tranco_candidate_pool.parquet` | Tranco popularity rank is NOT treated as ground-truth legitimacy. |
 | **Website Screenshots (Total)** | **1,008** | **1,008** (804 Phish, 204 Legit) | 0 | `data/raw/external_dataset/`, `data/raw/screenshots/` | **1,000 newly acquired** (800 Phish, 200 Legit) + **8 baseline scanner screenshots**. |
 | **Catalogued Visual Corpus** | **1,000** | **1,000** (800 Phish, 200 Legit) | 0 | `data/processed/screenshots/visual_corpus.parquet` | Fully catalogued with URL, dimensions, SHA256, and 64-bit DCT pHash. |
-| **Brand Reference Images** | **0** | 0 | 0 | `data/brands/` | Empty directory scaffolding does NOT count as acquired images. |
-| **Brand Similarity Pairs** | **0** | 0 | 0 | `data/brands/` | 0 pairs curated on disk. |
+| **Brand Reference Images** | **33** | **33** (18 Target Brands) | 0 | `data/brands/reference_gallery/` | Acquired directly from official brand domains with SHA-256 provenance. |
+| **Brand Similarity Pairs** | **116** | **116** (46 Pos, 70 Neg) | 0 | `data/brands/manifest_siamese_pairs.csv`, `data/splits/siamese/` | Partitioned into Train (73), Val (23), Test (20) with 0 brand/image leakage. |
 | **YOLO Bounding Box Annotations** | **0** | 0 | 0 | `data/annotations/detection/` | 0 detection annotations on disk. |
 | **Semantic Segmentation Masks** | **0** | 0 | 0 | `data/annotations/segmentation/`| 0 segmentation mask PNGs on disk. |
 | **Human-Verified Annotations** | **0** | 0 | 0 | `data/annotations/` | Strict zero count: unverified files are never marked as verified. |
@@ -78,14 +78,14 @@ All raw records passed through the hardened Milestone 2B preprocessing pipeline:
 
 ## 4. Curated Brand Reference Gallery (`data/brands/reference_gallery/`)
 
-Master registry: `data/brands/reference_gallery/manifest_brands.json` tracking **18 high-value target brands**:
-- **Banking / Finance:** State Bank of India (`sbi`), HDFC Bank (`hdfc`), PayPal (`paypal`), JPMorgan Chase (`chase`), Wells Fargo (`wellsfargo`), Bank of America (`bofa`).
-- **Technology & Cloud:** Microsoft (`microsoft`), Google (`google`), Apple (`apple`), Adobe (`adobe`).
-- **E-Commerce & Logistics:** Amazon (`amazon`), DHL (`dhl`), FedEx (`fedex`).
-- **Social Media & Streaming:** Meta / Facebook (`facebook`), Instagram (`instagram`), WhatsApp (`whatsapp`), LinkedIn (`linkedin`), Netflix (`netflix`).
+Master registry: `data/brands/reference_gallery/manifest_brands.json` tracking **18 high-value target brands** and `brand_assets_registry.json` tracking **33 authentic on-disk assets**:
+- **Banking / Finance:** State Bank of India (`sbi`: 2 assets), HDFC Bank (`hdfc`: 2 assets), PayPal (`paypal`: 1 asset), JPMorgan Chase (`chase`: 2 assets), Wells Fargo (`wellsfargo`: 2 assets), Bank of America (`bofa`: 1 asset).
+- **Technology & Cloud:** Microsoft (`microsoft`: 1 asset), Google (`google`: 3 assets), Apple (`apple`: 2 assets), Adobe (`adobe`: 1 asset).
+- **E-Commerce & Logistics:** Amazon (`amazon`: 1 asset), DHL (`dhl`: 2 assets), FedEx (`fedex`: 2 assets).
+- **Social Media & Streaming:** Meta / Facebook (`facebook`: 3 assets), Instagram (`instagram`: 1 asset), WhatsApp (`whatsapp`: 2 assets), LinkedIn (`linkedin`: 2 assets), Netflix (`netflix`: 1 asset).
 
 > [!NOTE]
-> Directory scaffolding exists for all 18 brands under `data/brands/reference_gallery/<brand_slug>/`. However, **0 brand reference images are currently on disk**. In accordance with strict empirical reporting, empty directory structures are recorded as 0 acquired brand assets.
+> All 18 monitored brands now contain verified authentic reference assets on disk (total 33 assets). Provenance metadata, official source URLs, capture dates, dimensions, and SHA-256 checksums are tracked in `brand_assets_registry.json`. Inaccessible endpoints (12) were recorded as UNAVAILABLE without substituting unverified third-party assets.
 
 ---
 

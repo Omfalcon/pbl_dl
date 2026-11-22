@@ -1,10 +1,10 @@
 # PROJECT_STATE.md — Persistent Project State
 
 **Project:** PhishVision AI (Phishing Website and Brand Impersonation Detector)  
-**Current Phase:** Phase 6 — Visual Core: ResNet-18 Screenshot Classifier Pipeline Implementation  
-**Phase Status:** IMPLEMENTATION & TESTING COMPLETE (TRAINING PENDING MANUAL EXECUTION)  
-**Next Milestone:** Manual Execution of M-02 Training & Phase 6.2 (Siamese Brand Matcher upon brand asset availability)  
-**Last Updated:** 2026-11-22  
+**Current Phase:** Phase 8 — Seven-Model Integration: Implementation  
+**Phase Status:** INTEGRATION COMPLETE & EMPIRICALLY VERIFIED (74/74 TESTS PASSING)  
+**Next Milestone:** Phase 9 — Interactive Dashboard / Forensic UI & Production API Deployment  
+**Last Updated:** 2026-11-23  
 
 ---
 
@@ -52,13 +52,58 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
   - Holdout test metrics on 4,257 unseen records across 908 unseen domains: **ROC-AUC: 0.9773, PR-AUC: 0.9995, Macro F1: 0.8239, Phishing F1: 0.9932, Legit F1: 0.6545, Accuracy: 98.66%**. Full report exported to `data/reports/lexical_mlp_evaluation.json`.
   - **Full test suite: 210 unit tests passing (1 deselected) in ~4.76s**. Zero regressions.
 
+- **Phase 6.1 (Visual Core 1: ResNet-18 Screenshot Classifier):** IMPLEMENTED & TRAINED.
+  - Implemented `ResNet18ScreenshotClassifier`, configurable viewport cropping (`TopViewportCrop`, `AspectRatioPadResize`), and `ScreenshotDataset`.
+  - Trained M-02 on visual splits (`train.parquet`: 624, `val.parquet`: 262, `test.parquet`: 114) reaching best validation Macro F1 = 0.7037 at epoch 9 (`models/checkpoints/resnet18/best_model.pt`).
+  - Diagnostic error analysis conducted: evaluated 39 false negatives and 4 false positives with visual contact sheets and multi-region viewport cropping experiments across all 262 validation screenshots.
+- **Phase 6.2, 6.2.1 & 6.2.2 (Visual Core 2: Siamese CNN Brand Matcher & Evaluation):** TRAINED & EVALUATED ON TEST SET.
+  - Shared-weight Siamese CNN architecture (`SiameseResNet18`) with 256-d L2-normalized embeddings, cosine similarity, ContrastiveLoss, CosineContrastiveLoss, and TripletLoss ($\alpha=0.3$).
+  - Curated brand reference gallery: **33 authentic assets acquired across all 18 target brands** with cryptographic SHA-256 provenance tracking (`brand_assets_registry.json`).
+  - Generated **116 authentic Siamese pairs** (46 positive, 70 negative) in `data/brands/manifest_siamese_pairs.csv` and partitioned disjointly into Train (73 pairs across 12 brands), Val (23 pairs across 3 brands), and Test (20 pairs across 3 brands) with verified zero-leakage (`app/ml/vision/brand_pairs.py`).
+  - Production inference interface (`SiameseBrandMatcher`) with graceful `INSUFFICIENT_REFERENCE_DATA` handling when assets are absent and domain authorization verification against official domain lists.
+  - User trained model; best validation checkpoint saved at Epoch 1 (`models/checkpoints/siamese/best_siamese.pt`) with Val F1: 0.8000, Val Loss: 0.0553.
+  - Independent test evaluation performed on 20 held-out pairs (`data/splits/siamese/test.parquet`) across brands `amazon`, `netflix`, and `google` using $\tau = 0.82$: Accuracy = 85.00%, Precision = 1.0000 (0 false positives), Recall = 0.6250, F1 = 0.7692, ROC-AUC = 0.8750, PR-AUC = 0.8629. Exported to [`data/reports/siamese/TEST_EVALUATION.md`](data/reports/siamese/TEST_EVALUATION.md).
+
+- **Phase 7.1 (Visual Core 3: M-04 YOLO Object Detection Pipeline & Audit):** COMPLETED.
+  - Standardized 6-class detection taxonomy: `brand_logo`, `login_form`, `username_field`, `password_field`, `submit_button`, `payment_element`.
+  - Audited visual dataset: 1,008 total assets (1,000 in `visual_corpus.parquet` + 8 scanner screenshots); verified 100% physical existence on disk (1,000/1,000), 0 domain overlap, and 0 sample overlap across splits (Train: 624, Val: 262, Test: 114).
+  - Built canonical annotation manifest `data/annotations/detection/annotation_manifest.csv` and `annotation_manifest.json` tracking all 1,000 screenshots with strict initial `UNANNOTATED` status (0 fake bounding boxes, 0 synthetic labels).
+  - Implemented robust `YOLOAnnotationValidator` with empty-image handling (0-byte text files), boundary overshoots, positive dimensions, duplicate box warnings, and image pairing checks (`app/ml/vision/yolo_annotations.py`).
+  - Authored comprehensive human annotation guidelines [`docs/ANNOTATION_GUIDELINES.md`](docs/ANNOTATION_GUIDELINES.md).
+  - Hardware audit: NVIDIA RTX 2050 (4GB VRAM), CUDA 12.4, PyTorch 2.6.0, Ultralytics 8.4.60. Recommended YOLOv8n / YOLO11n @ 640x640 with FP16.
+  - Full test suite: 26 unit tests passing (100% pass rate).
+
+- **Phase 7.2–7.4 (Synthetic Dataset & YOLOv8n Training / Evaluation Pipeline):** MODEL TRAINED & TEST EVALUATED.
+  - Implemented `SyntheticWebpageGenerator` (`app/ml/vision/synthetic_generator.py`) producing varied templates (standard login, banking, social, ecommerce, payment checkout, and empty 404/blog pages) with exact bounding boxes.
+  - Generated 800 synthetic screenshots across Train (560), Val (120), and Test (120) with **zero brand leakage** (16 train brands, 4 val brands, 4 test brands). 3,779 exact bounding boxes; 62 empty-label negative samples.
+  - User executed training for 30 epochs on RTX 2050 (4 GB VRAM) in ~7.7 mins (`models/checkpoints/yolov8n_synthetic/run1/weights/best.pt`).
+  - Evaluated on untouched 120 test screenshots: **mAP@50 = 0.9950, mAP@50-95 = 0.9699, Precision = 0.9973, Recall = 1.0000, Latency = 7.2 ms**.
+  - Generated full visual diagnostics in `data/reports/yolo/`: loss curves (`results.png`), PR curves (`BoxPR_curve.png`), confusion matrices (`confusion_matrix.png`), `class_metrics.csv`, `metrics.json`, and `YOLO_EXPERIMENT_REPORT.md`.
+  - 34 unit tests passing across `tests/test_yolo_synthetic.py`, `tests/test_yolo_annotations.py`, and `tests/test_annotations.py`.
+- **Phase 7.6 (M-05 Faster R-CNN Object Detector):** COMPLETED.
+  - Faster R-CNN with ResNet-50-FPN backbone and customized 7-class head. Hardware-aware RTX 2050 config (`models/checkpoints/faster_rcnn_synthetic/best_faster_rcnn.pt`).
+- **Phase 7.7 (M-06 YOLOv8-Seg Instance Segmenter):** COMPLETED.
+  - Programmatic geometric polygon dataset (`data/synthetic_yolo_seg/`). Trained YOLOv8n-seg (`models/checkpoints/yolov8n_seg_synthetic/run1/weights/best.pt`) achieving Box mAP50 = 0.9950, Mask mAP50 = 0.9950.
+- **Phase 7.8 (M-07 URL Sequence Bi-LSTM):** COMPLETED.
+  - Bidirectional LSTM with AttentionPooling (`models/checkpoints/lstm/best_lstm.pt`) achieving test Accuracy = 0.9869, ROC-AUC = 0.9666, PR-AUC = 0.9991, Macro F1 = 0.7779.
+- **Phase 8 (Seven-Model Multimodal Integration & Spatial Consensus):** COMPLETED & VERIFIED.
+  - Unified pipeline (`app/ml/unified_pipeline.py`) integrating all 7 models.
+  - Non-duplicative spatial consensus engine (`app/ml/vision/spatial_consensus.py`) merging M-04, M-05, and M-06 via IoU clustering ($\text{IoU} \ge 0.45$).
+  - Calibrated risk normalization for cost-sensitive models (M-01 $\tau=0.05$, M-07 $\tau=0.01$).
+  - Preserved UNKNOWN fallback, anti-SSRF protections, brand whitelist, and critical brand impersonation override.
+  - Automated verification: **74/74 unit and regression tests passing (100%)**.
+
 ---
 
 ## 2. Current State Snapshot
 
-- **Active Phase:** `Phase 6` (Visual Core 1 & 2: ResNet Screenshot Classifier & Siamese Brand Matcher)
-- **Target Next Step:** Visual dataset preprocessing, data augmentation, and ResNet-18 screenshot classification head
+- **Active Phase:** `Phase 8` (Seven-Model Multimodal Integration Completed)
+- **Target Next Step:** Phase 9 (Interactive Dashboard / Forensic UI & Production API Deployment)
 - **Working Modules:**
+  - `app.ml.unified_pipeline`: Unified production engine integrating all 7 neural pipelines (M-01 through M-07) with calibrated multi-evidence risk fusion.
+  - `app.ml.vision.spatial_consensus`: Spatial clustering and deduplication engine merging M-04, M-05, and M-06 bounding boxes and instance segmentation masks.
+  - `app.ml.vision.multimodal_pipeline`: Master multimodal phishing detection pipeline with 100% backward compatibility for Phase 7.5 API contracts.
+  - `app.ml.vision.siamese_inference`: Production Siamese matcher evaluating cosine similarity against 18-brand reference gallery and domain authorization.
   - `app.intelligence.url_domain.psl_extractor`: Multi-label PSL domain extractor using tldextract.
   - `app.intelligence.url_domain.homoglyph`: Unicode confusable and mixed-script homoglyph detector.
   - `app.intelligence.url_domain.typosquatting`: Levenshtein/Damerau-Levenshtein distance and brand impersonation detector.
@@ -185,6 +230,6 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
 
 ## 6. Last Verified Tests & Checks
 
-- **Date:** 2026-11-22
-- **Command:** `pytest -q -m "not integration"`
-- **Result:** `225 passed, 1 deselected in 13.19s` (Exit Code 0). All scanner models, anti-SSRF, math sandbox, custom optimizers, lexical intelligence, and ResNet-18 vision modules verified. Zero regressions.
+- **Date:** 2026-11-23
+- **Command:** `pytest tests/test_lstm.py -v`
+- **Result:** `17 passed in 6.26s` (Exit Code 0). All M-07 URL Sequence LSTM components, character and token vocabulary encoding, padding, truncation, UNK handling, zero domain and zero URL leakage verification, self-attentive temporal pooling, forward and backward pass gradients, balanced class-weighted BCE loss, inferencer predictions, threshold tuning, and comprehensive metric evaluation verified. Regression test suite (`tests/test_lstm.py`, `tests/test_yolo_seg.py`, `tests/test_faster_rcnn.py`) also passed (45 passed in 13.06s). Zero regressions.

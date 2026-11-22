@@ -63,10 +63,12 @@ data/scans/
 *.hdf5
 
 # Model artifacts and weights
-models/weights/*.pt
-models/weights/*.pth
-models/weights/*.onnx
-models/weights/*.safetensors
+*.pt
+*.pth
+*.onnx
+*.safetensors
+models/checkpoints/
+models/weights/
 runs/
 wandb/
 

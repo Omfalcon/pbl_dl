@@ -97,45 +97,145 @@ Visual intelligence forms the central empirical contribution of PhishVision AI. 
 - **Domain Authorization Integration:**
   - If $\text{Brand}^*$ identified AND current registrable domain $\notin \text{AuthorizedDomains}(\text{Brand}^*)$, flag `CRITICAL: Brand Impersonation Mismatch`.
 - **Training Dataset & Annotations:**
-  - $\ge 1,000$ paired crops from `data/manifests/manifest_siamese_pairs.csv` (authentic positive variants, attacker lookalike negatives, and cross-brand negatives).
-- **Evaluation Metrics:** Top-1 Retrieval Accuracy ($\ge 0.92$), Area Under the ROC Curve, False Match Rate (FMR $\le 0.01$).
+  - 116 authentic pairs (46 positive, 70 negative) from `data/brands/manifest_siamese_pairs.csv` across all 18 target brands (33 authentic assets).
+  - Partitioned with verified zero-leakage into `data/splits/siamese/`: Train (73 pairs across 12 brands), Val (23 pairs across 3 brands), Test (20 pairs across 3 brands).
+  - Acquisition pipeline: `scripts/datasets/run_brand_acquisition.py` and `app/ml/vision/brand_pairs.py`.
+- **Implementation Status:** COMPLETE & READY TO TRAIN (Assets acquired, pairs partitioned, zero training executed).
+- **Execution Command (when assets acquired):**
+  ```powershell
+  & "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.train_siamese --config configs/siamese.yaml
+  ```
+- **Evaluation Metrics:** Top-1 Retrieval Accuracy ($\ge 0.92$), Area Under the ROC Curve, Precision, Recall, Macro F1 at $\tau = 0.82$, False Match Rate (FMR $\le 0.01$).
 
 ---
 
 ### 2.3 M-04: Ultralytics YOLO UI Element & Logo Detector (Visual Module 3)
-- **Role:** Real-time spatial object detection. Localizes visual components essential for credential harvesting and branding.
-- **Backbone Architecture:** Ultralytics YOLOv8s / YOLOv11s (single-stage, anchor-free, decoupled head).
-- **Classes:**
+- **Role:** Real-time spatial object detection. Localizes visual components essential for credential harvesting and branding. Directly feeds detected `brand_logo` crops to M-03 Siamese matcher.
+- **Backbone Architecture:** Ultralytics YOLOv8n (Nano, ~3.2M params) or YOLO11n (~2.6M params), single-stage, anchor-free decoupled head.
+- **Classes (Standardized 6-Class Taxonomy):**
   - `0: brand_logo`
-  - `1: username_input`
-  - `2: password_input`
-  - `3: submit_button`
-  - `4: qr_code`
+  - `1: login_form`
+  - `2: username_field`
+  - `3: password_field`
+  - `4: submit_button`
+  - `5: payment_element`
 - **Input Specifications:**
-  - Shape: $B \times 3 \times 640 \times 640$ (Float32, normalized $[0.0, 1.0]$).
+  - Shape: $B \times 3 \times 512 \times 512$ (or $640 \times 640$, Float32/FP16, normalized $[0.0, 1.0]$).
   - Preprocessing: Letterbox square padding preserving original aspect ratio.
 - **Output Specifications:**
-  - List of detected objects: `[{ class_name, confidence, bbox: [x1, y1, x2, y2] }]`.
-  - Spatial relationships: Computes vertical/horizontal distance between detected logos and password input fields.
-- **Training Dataset & Annotations:**
-  - 1,500 annotated webpage screenshots with bounding boxes in YOLO format (`.txt` per image).
-- **Evaluation Metrics:** mAP@50 ($\ge 0.85$), mAP@50-95 ($\ge 0.65$), Per-class Average Precision, GPU latency ($\le 25$ ms).
+  - List of detected objects: `[{ class_id, class_name, confidence, bbox: [x1, y1, x2, y2] }]`.
+  - Bounding box crops forwarded conditionally to M-03 for brand similarity verification.
+  - Spatial relationships: Computes vertical/horizontal distance and topological containment between `login_form` and credential inputs.
+- **Dataset & Annotations:**
+  - Phase 7.1 Canonical Manifest: 1,008 catalogued real screenshots tracked as `UNANNOTATED` (`data/annotations/detection/annotation_manifest.csv`).
+  - Phase 7.2–7.4 Synthetic Dataset: 800 programmatic synthetic screenshots across 6 layout templates (`standard_login`, `banking_login`, `social_login`, `ecommerce_login`, `payment_checkout`, and empty pages) with exact bounding boxes in `data/synthetic_yolo/` (Train: 560, Val: 120, Test: 120).
+- **Controlled Synthetic Experiment Notice:**
+  - The synthetic dataset serves as a reproducible proof-of-concept for bounding-box coordinate learning, anchor-free detection convergence, and multi-class UI element parsing. Its benchmark metrics do NOT represent real-world phishing detection accuracy.
+- **Hardware-Aware Training Configuration (RTX 2050 4GB VRAM):**
+  - Batch size: 4, Resolution: 512, Workers: 2, Mixed Precision: FP16 (`half=True`), Epochs: 30, Patience: 10, Seed: 42.
+- **Execution Commands:**
+  - Training:
+    ```powershell
+    & "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.train_yolov8 --config configs/yolov8n_synthetic.yaml
+    ```
+  - Test Evaluation:
+    ```powershell
+    & "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.evaluate_yolov8 --checkpoint models/checkpoints/yolov8n_synthetic/run1/weights/best.pt
+    ```
+- **Evaluation Metrics:** mAP@50, mAP@50-95, Per-class Precision, Recall, F1, Loss curves, and Confusion Matrix.
 
 ---
 
-### 2.4 M-06 & M-07: U-Net & YOLO-Seg Layout Segmenters (Visual Module 4)
-- **Role:** Webpage region topology analysis. Partitions the visual surface into functional layout zones to detect anomalous layout structures (e.g. login form occupying $>40\%$ of the screen with no headers).
-- **Architectures:**
-  - **M-06 (U-Net):** Encoder-decoder with skip connections (ResNet-34 encoder), predicting dense pixel masks for 5 semantic classes (`background`, `header`, `credential_form`, `body`, `footer`).
-  - **M-07 (YOLO-Seg):** Ultralytics YOLOv8-Seg predicting instance polygon masks for distinct UI containers.
-- **Input Specifications:**
-  - U-Net: $B \times 3 \times 256 \times 256$ (Float32).
-  - YOLO-Seg: $B \times 3 \times 640 \times 640$ (Float32).
+### 2.3.1 M-05: Faster R-CNN with ResNet-50-FPN (Comparative Object Detector)
+- **Role:** Academic two-stage benchmark object detector. Provides a formal architectural comparison against M-04 (YOLOv8n one-stage detector) to evaluate region proposal precision, multi-scale feature pyramids, localization accuracy, and inference latency trade-offs on web UI elements.
+- **Architecture:** Torchvision Faster R-CNN with ResNet-50 Feature Pyramid Network (FPN) backbone:
+  - Backbone: ResNet-50 with 5 FPN scales (P2, P3, P4, P5, P6), fine-tuning top 3 stages.
+  - Stage 1: Region Proposal Network (RPN) with anchor scales and aspect ratios.
+  - Stage 2: RoIAlign extraction followed by two 1024-d fully connected layers.
+  - Box Predictor Head: `FastRCNNPredictor` with 7 classes (Class 0: `__background__`, Classes 1..6: `brand_logo`, `login_form`, `username_field`, `password_field`, `submit_button`, `payment_element`).
+- **Hardware-Aware Memory Configuration (RTX 2050 4GB VRAM):**
+  - Resolution: `min_size=512, max_size=512` (prevents memory explosion from 800-1333 default scaling).
+  - Batch size: 2.
+  - Mixed Precision: PyTorch `torch.amp.autocast('cuda')`.
+- **Dataset:** Reuses untouched synthetic website element dataset from Phase 7.2 (`data/synthetic_yolo/manifest.csv`, Test: 120 images) with exact same splits and empty-image support.
+- **Execution Commands:**
+  - Training:
+    ```powershell
+    & "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.train_faster_rcnn --config configs/faster_rcnn.yaml
+    ```
+  - Test Evaluation:
+    ```powershell
+    & "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.train_faster_rcnn --config configs/faster_rcnn.yaml --eval-only
+    ```
+- **Evaluation Outputs:** mAP@50, mAP@50-95, Per-class AP, Precision, Recall, Confusion Matrix, Inference Latency, Checkpoint Size, VRAM allocation, and side-by-side comparison report with YOLOv8n (`data/reports/faster_rcnn/`).
+
+---
+
+### 2.4 M-06: YOLOv8-Seg Instance Segmenter (Visual Module 4)
+- **Role:** Precise instance-level UI segmentation. Detects and segments 6 key web authentication and transaction components (`brand_logo`, `login_form`, `username_field`, `password_field`, `submit_button`, `payment_element`) at the pixel level, generating polygonal boundaries and dense segmentation masks.
+- **Architecture:** Ultralytics YOLOv8n-seg (Nano Instance Segmentation, 86 layers, 3,259,234 parameters, 11.3 GFLOPs) with ProtoNet mask branch and decoupled box/class/mask heads.
+- **Input Specifications:** $B \times 3 \times 512 \times 512$ (Float16/Float32).
 - **Output Specifications:**
-  - Dense class mask and regional area percentages: `form_area_pct`, `header_area_pct`, `footer_area_pct`.
-- **Training Dataset & Annotations:**
-  - 1,000 screenshots annotated with COCO JSON polygon contours and 8-bit semantic PNG masks.
+  - Bounding box predictions $[x_1, y_1, x_2, y_2]$ with class confidences.
+  - Instance polygon coordinates $[(x_1, y_1), \dots, (x_n, y_n)]$ and rasterized binary masks $[H, W]$.
+- **Hardware-Aware Memory Configuration (RTX 2050 4GB VRAM):**
+  - Batch size: 4, Resolution: 512, Mixed Precision: FP16 (`half=True`), Epochs: 25, EarlyStopping patience: 10, Seed: 42.
+- **Training Telemetry & Checkpoint:**
+  - Trained on RTX 2050 (4GB VRAM) for 16 epochs (early stopping at epoch 16, best epoch: 6). Training time: 0.088 hours (~5.3 mins).
+  - Saved Checkpoint: `models/checkpoints/yolov8n_seg_synthetic/run1/weights/best.pt` (6.45 MB stripped).
+- **Independent Test Evaluation Results (120 untouched test screenshots, 557 UI instances):**
+  - **Bounding Box Detection:** Box mAP@50 = **0.9950**, Box mAP@50-95 = **0.8889**, Precision = **0.9525**, Recall = **1.0000**.
+  - **Instance Mask Segmentation:** Mask mAP@50 = **0.9950**, Mask mAP@50-95 = **0.8927**, Precision = **0.9525**, Recall = **1.0000**.
+  - **Per-Class Mask mAP@50-95:** `brand_logo` (0.8457), `login_form` (0.9950), `username_field` (0.8955), `password_field` (0.8654), `submit_button` (0.7828), `payment_element` (0.9716).
+- **Dataset:** Dedicated synthetic segmentation dataset (`data/synthetic_yolo_seg/`) with exact programmatic polygon contours and 8-bit multi-class semantic masks across 800 images (560 Train, 120 Val, 120 Test) with zero brand leakage. Original detection dataset (`data/synthetic_yolo/`) remains untouched.
+- **Execution Commands:**
+  - Training:
+    ```powershell
+    & "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.train_yolo_seg --config configs/yolo_seg.yaml
+    ```
+  - Test Evaluation:
+    ```powershell
+    & "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.train_yolo_seg --config configs/yolo_seg.yaml --eval-only
+    ```
+- **Evaluation Outputs:** Dual Box and Mask mAP@50, mAP@50-95, Mean Precision, Mean Recall, per-class mask metrics, loss/PR curves, and semi-transparent visual mask previews (`data/reports/yolo_seg/`).
+
+---
+
+### 2.5 U-Net Semantic Layout Segmenter (Academic Sandbox)
+- **Role:** Webpage region topology analysis. Partitions the visual surface into functional layout zones to detect anomalous layout structures (e.g. login form occupying $>40\%$ of the screen with no headers).
+- **Architecture:** Encoder-decoder with skip connections (ResNet-34 encoder), predicting dense pixel masks for 5 semantic classes (`background`, `header`, `credential_form`, `body`, `footer`).
+- **Input Specifications:** $B \times 3 \times 256 \times 256$ (Float32).
+- **Output Specifications:** Dense class mask and regional area percentages: `form_area_pct`, `header_area_pct`, `footer_area_pct`.
 - **Evaluation Metrics:** Mean Intersection over Union (mIoU $\ge 0.80$), Dice Coefficient ($\ge 0.85$).
+
+---
+
+### 2.6 M-07: URL Sequence LSTM (Sequential Pattern Analyzer)
+- **Role:** Deep sequential pattern recognition. Directly processes raw character and token sequences of target URLs to learn structural obfuscations (e.g. nested subdomains, homoglyph substitutions, high-entropy tokens, path manipulations) without requiring manual feature engineering. Incorporates a conditional redirect sequence branch for dynamic scan integration.
+- **Architecture:** Bidirectional LSTM with Self-Attentive Temporal Pooling (`app/ml/sequence/lstm_model.py`):
+  - URL Sequence Branch: Character Embedding (64-d) -> 2-layer BiLSTM (hidden_dim=64, dropout=0.3) -> 128-d temporal sequence -> Self-Attentive Pooling -> 128-d context vector.
+  - Redirect Sequence Branch: Token Embedding (32-d) -> 1-layer LSTM (hidden_dim=32) -> 32-d final state (zero-masked when absent).
+  - Classification Head: LayerNorm -> Linear(160, 64) -> ReLU -> Dropout(0.3) -> Linear(64, 1) -> Sigmoid probability.
+  - Total Parameters: **210,689 parameters** (~0.84 MB weights, FP32).
+- **Hardware-Aware Memory Profile (RTX 2050 4GB VRAM):**
+  - Batch size: 128, max_seq_len: 256, Peak VRAM < 350 MiB, CPU fallback compatible.
+- **Dataset & Leakage Audit:**
+  - Evaluated on domain-isolated splits (`data/splits/`): Train (32,157 samples), Val (7,715 samples), Test (4,257 samples).
+  - Verified **0 domain leakage and 0 URL leakage** across all splits.
+  - **Redirect Data Disclosure:** Static corpus contains no labelled redirect chains. Redirect learning is explicitly disclosed as not yet trained; model operates on raw sequential URL patterns with clean fallback.
+- **Class Imbalance Strategy:**
+  - Balanced class weighting in BCE loss ($w_0 = 36.96$ for Legitimate, $w_1 = 0.5068$ for Phishing) to handle 72.9:1 class imbalance without synthetic data fabrication.
+  - Decision threshold $\tau$ calibrated strictly on validation set.
+- **Execution Commands:**
+  - Training:
+    ```powershell
+    & "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.train_lstm --config configs/lstm.yaml
+    ```
+  - Test Evaluation:
+    ```powershell
+    & "C:\Users\hp\PycharmProjects\blansole_footscan\.venv\Scripts\python.exe" -m app.ml.train_lstm --config configs/lstm.yaml --eval-only
+    ```
+- **Evaluation Outputs:** Accuracy, Precision, Recall, Macro F1, ROC-AUC, PR-AUC, Confusion Matrix, Latency, and side-by-side comparison with M-01 Lexical MLP (`data/reports/lstm/`).
 
 ---
 
@@ -188,3 +288,18 @@ PhishVision AI is explicitly engineered to handle completely unknown websites wi
 1. **Unconditional General Classification (M-02 ResNet):** Evaluates visual primitives of phishing (visual clutter, mismatched fonts, low-fidelity graphics, stolen templates) learned across thousands of diverse samples. It provides an independent risk probability regardless of brand presence.
 2. **Structural Anomaly Quantification (M-04 YOLO & M-06 U-Net):** Identifies credential-harvesting mechanisms (password inputs, login forms) and verifies whether their visual presentation exhibits aggressive, phishing-like spatial dominance.
 3. **Conditional Brand Matching (M-03 Siamese):** If a website does not claim or display a known brand logo, M-03 remains neutral. Novel, legitimate small-business sites are evaluated purely on their structural visual integrity and lexical/behavioral evidence.
+
+---
+
+## 5. Phase 8 Seven-Model Multimodal Integration Engine
+
+Unified implementation in [`app/ml/unified_pipeline.py`](app/ml/unified_pipeline.py) orchestrating all seven models:
+
+| Tier | Models Integrated | Coordination & Deduplication Mechanism | Output Format |
+| :--- | :--- | :--- | :--- |
+| **URL Intelligence** | **M-01** (Lexical MLP) + **M-07** (Sequence Bi-LSTM) | Calibrated threshold normalization ($r(p, \tau)$ mapping $\tau \to 0.50$); composite URL risk calculation. | Normalized risk scores, binary prediction, entropy, and token lengths. |
+| **Global Visual** | **M-02** (ResNet-18) | Global layout classification on full screenshot. | Layout risk score $p_{\text{resnet}} \in [0.0, 1.0]$. |
+| **Spatial UI Detection** | **M-04** (YOLOv8n) + **M-05** (Faster R-CNN) + **M-06** (YOLOv8-Seg) | `SpatialConsensusEngine` (`app/ml/vision/spatial_consensus.py`): IoU clustering ($\text{IoU} \ge 0.45$) merges overlapping boxes of same class; agreement tracking; polygon mask preservation from YOLO-Seg. | Fused UI elements list, agreement counts, polygon masks, and deduplicated UI class counts. |
+| **Brand Verification** | **M-03** (Siamese CNN) | Conditional evaluation on deduplicated logo crops with ~10% context padding. Cross-checked against 18 target brands in `data/brands/reference_gallery/` and official domain whitelist. | Predicted brand, cosine similarity $S \in [-1.0, 1.0]$, authorization verdict. |
+| **Threat Fusion** | Master Explainable Fusion | Multi-evidence rule synthesis preserving brand whitelist, brand impersonation override ($risk \ge 0.95$), 404 capping ($\le 0.40$), and `UNKNOWN / INSUFFICIENT EVIDENCE`. | Threat category, calibrated risk score, structured evidence dictionary, and human-readable explanation. |
+

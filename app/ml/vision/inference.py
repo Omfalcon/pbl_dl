@@ -29,6 +29,7 @@ class ResNet18Inference:
         device: str | torch.device | None = None,
         crop_strategy: str = "top_viewport",
         image_size: int = 224,
+        viewport_ratio: float = 1.0,
     ) -> None:
         if device is None:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -37,6 +38,7 @@ class ResNet18Inference:
 
         self.crop_strategy = crop_strategy
         self.image_size = image_size
+        self.viewport_ratio = viewport_ratio
         self.model: ResNet18ScreenshotClassifier | None = None
         self.checkpoint_metadata: dict[str, Any] = {}
 
@@ -52,6 +54,7 @@ class ResNet18Inference:
         self.transform = build_transforms(
             crop_strategy=self.crop_strategy,
             image_size=self.image_size,
+            viewport_ratio=self.viewport_ratio,
             is_training=False,
             horizontal_flip=False,
         )
@@ -84,10 +87,12 @@ class ResNet18Inference:
         prep_cfg = checkpoint.get("preprocessing_config", {})
         self.crop_strategy = prep_cfg.get("crop_strategy", self.crop_strategy)
         self.image_size = prep_cfg.get("image_size", self.image_size)
+        self.viewport_ratio = prep_cfg.get("viewport_ratio", self.viewport_ratio)
 
         self.transform = build_transforms(
             crop_strategy=self.crop_strategy,
             image_size=self.image_size,
+            viewport_ratio=self.viewport_ratio,
             is_training=False,
             horizontal_flip=False,
         )

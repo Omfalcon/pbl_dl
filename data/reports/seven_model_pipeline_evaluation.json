@@ -1,0 +1,224 @@
+[
+  {
+    "test_case_name": "Synthetic Standard Login (TitanVault)",
+    "expected_type": "Synthetic UI Form",
+    "input_url": "https://secure-login.titanvault-portal.net/auth/signin?token=9281a",
+    "target_domain": "titanvault-portal.net",
+    "threat_decision": "PHISHING",
+    "risk_score": 0.9735,
+    "is_brand_impersonation": false,
+    "matched_brand": "UNIDENTIFIED_OR_NEUTRAL",
+    "brand_similarity": 0.6992,
+    "url_models": {
+      "m01_lexical_prob": 1.0,
+      "m01_normalized_risk": 1.0,
+      "m07_lstm_prob": 0.985,
+      "m07_normalized_risk": 0.9924,
+      "composite_url_risk": 0.9962
+    },
+    "visual_models": {
+      "m02_resnet_prob": 1.0,
+      "total_fused_elements": 10,
+      "fused_class_counts": {
+        "brand_logo": 2,
+        "login_form": 2,
+        "username_field": 2,
+        "password_field": 2,
+        "submit_button": 2,
+        "payment_element": 0
+      },
+      "raw_detector_counts": {
+        "M-04_yolov8n": 5,
+        "M-05_faster_rcnn": 5,
+        "M-06_yolov8_seg": 3
+      }
+    },
+    "explanation": "Active login credential fields detected on suspicious domain 'titanvault-portal.net'. Threat confirmed from localized UI elements, spatial consensus, and host telemetry.",
+    "preview_saved": "data\\reports\\seven_model_previews\\synth_test_0003_annotated.png"
+  },
+  {
+    "test_case_name": "Synthetic Payment Checkout (OmniPay)",
+    "expected_type": "Synthetic Payment Form",
+    "input_url": "https://billing-checkout.omnipays-gateway.com/pay/invoice_4910",
+    "target_domain": "omnipays-gateway.com",
+    "threat_decision": "PHISHING",
+    "risk_score": 0.972,
+    "is_brand_impersonation": false,
+    "matched_brand": "UNIDENTIFIED_OR_NEUTRAL",
+    "brand_similarity": 0.6754,
+    "url_models": {
+      "m01_lexical_prob": 1.0,
+      "m01_normalized_risk": 1.0,
+      "m07_lstm_prob": 0.9705,
+      "m07_normalized_risk": 0.9851,
+      "composite_url_risk": 0.9926
+    },
+    "visual_models": {
+      "m02_resnet_prob": 1.0,
+      "total_fused_elements": 13,
+      "fused_class_counts": {
+        "brand_logo": 2,
+        "login_form": 2,
+        "username_field": 0,
+        "password_field": 1,
+        "submit_button": 2,
+        "payment_element": 6
+      },
+      "raw_detector_counts": {
+        "M-04_yolov8n": 6,
+        "M-05_faster_rcnn": 6,
+        "M-06_yolov8_seg": 4
+      }
+    },
+    "explanation": "Active payment inputs detected on suspicious domain 'omnipays-gateway.com'. Threat confirmed from localized UI elements, spatial consensus, and host telemetry.",
+    "preview_saved": "data\\reports\\seven_model_previews\\synth_test_0005_annotated.png"
+  },
+  {
+    "test_case_name": "Synthetic Empty / 404 Page (Negative Control)",
+    "expected_type": "Empty Negative Sample",
+    "input_url": "https://help-docs.cloudsupport-knowledge.org/articles/error-404",
+    "target_domain": "cloudsupport-knowledge.org",
+    "threat_decision": "PHISHING",
+    "risk_score": 0.8582,
+    "is_brand_impersonation": false,
+    "matched_brand": "UNIDENTIFIED_OR_NEUTRAL",
+    "brand_similarity": 0.0,
+    "url_models": {
+      "m01_lexical_prob": 1.0,
+      "m01_normalized_risk": 1.0,
+      "m07_lstm_prob": 0.0087,
+      "m07_normalized_risk": 0.433,
+      "composite_url_risk": 0.7165
+    },
+    "visual_models": {
+      "m02_resnet_prob": 1.0,
+      "total_fused_elements": 3,
+      "fused_class_counts": {
+        "brand_logo": 0,
+        "login_form": 2,
+        "username_field": 1,
+        "password_field": 0,
+        "submit_button": 0,
+        "payment_element": 0
+      },
+      "raw_detector_counts": {
+        "M-04_yolov8n": 0,
+        "M-05_faster_rcnn": 0,
+        "M-06_yolov8_seg": 3
+      }
+    },
+    "explanation": "Elevated phishing risk (0.86) from combined URL and visual evidence.",
+    "preview_saved": "data\\reports\\seven_model_previews\\synth_test_0031_annotated.png"
+  },
+  {
+    "test_case_name": "Real-World Phishing Screenshot (ext_vis_00001)",
+    "expected_type": "Real-World Phishing",
+    "input_url": "http://bafybeiddrvh2jskkihnnlw4i4rs23m43bg56bjpdr43cfon6oddmha6lue.ipfs.dweb.link",
+    "target_domain": "dweb.link",
+    "threat_decision": "PHISHING",
+    "risk_score": 0.85,
+    "is_brand_impersonation": false,
+    "matched_brand": "UNIDENTIFIED_OR_NEUTRAL",
+    "brand_similarity": 0.7635,
+    "url_models": {
+      "m01_lexical_prob": 1.0,
+      "m01_normalized_risk": 1.0,
+      "m07_lstm_prob": 0.9972,
+      "m07_normalized_risk": 0.9986,
+      "composite_url_risk": 0.9993
+    },
+    "visual_models": {
+      "m02_resnet_prob": 0.0,
+      "total_fused_elements": 14,
+      "fused_class_counts": {
+        "brand_logo": 5,
+        "login_form": 3,
+        "username_field": 2,
+        "password_field": 3,
+        "submit_button": 0,
+        "payment_element": 1
+      },
+      "raw_detector_counts": {
+        "M-04_yolov8n": 4,
+        "M-05_faster_rcnn": 6,
+        "M-06_yolov8_seg": 4
+      }
+    },
+    "explanation": "Active payment inputs detected on suspicious domain 'dweb.link'. Threat confirmed from localized UI elements, spatial consensus, and host telemetry.",
+    "preview_saved": "data\\reports\\seven_model_previews\\ext_vis_00001_annotated.png"
+  },
+  {
+    "test_case_name": "Real-World Legitimate Screenshot (ext_vis_00816)",
+    "expected_type": "Real-World Legitimate",
+    "input_url": "t.me",
+    "target_domain": "t.me",
+    "threat_decision": "PHISHING",
+    "risk_score": 0.85,
+    "is_brand_impersonation": false,
+    "matched_brand": "UNIDENTIFIED_OR_NEUTRAL",
+    "brand_similarity": 0.6914,
+    "url_models": {
+      "m01_lexical_prob": 1.0,
+      "m01_normalized_risk": 1.0,
+      "m07_lstm_prob": 0.9976,
+      "m07_normalized_risk": 0.9988,
+      "composite_url_risk": 0.9994
+    },
+    "visual_models": {
+      "m02_resnet_prob": 0.3298,
+      "total_fused_elements": 10,
+      "fused_class_counts": {
+        "brand_logo": 5,
+        "login_form": 2,
+        "username_field": 1,
+        "password_field": 0,
+        "submit_button": 2,
+        "payment_element": 0
+      },
+      "raw_detector_counts": {
+        "M-04_yolov8n": 1,
+        "M-05_faster_rcnn": 4,
+        "M-06_yolov8_seg": 5
+      }
+    },
+    "explanation": "Active login credential fields detected on suspicious domain 't.me'. Threat confirmed from localized UI elements, spatial consensus, and host telemetry.",
+    "preview_saved": "data\\reports\\seven_model_previews\\ext_vis_00816_annotated.png"
+  },
+  {
+    "test_case_name": "Missing Screenshot / Ambiguous Lexical (Insufficient Evidence Fallback)",
+    "expected_type": "Fallback Test",
+    "input_url": "https://medium.com/@user/story",
+    "target_domain": "medium.com",
+    "threat_decision": "UNKNOWN / INSUFFICIENT EVIDENCE",
+    "risk_score": 0.5,
+    "is_brand_impersonation": false,
+    "matched_brand": "UNIDENTIFIED_OR_NEUTRAL",
+    "brand_similarity": 0.0,
+    "url_models": {
+      "m01_lexical_prob": 0.5263,
+      "m01_normalized_risk": 0.7507,
+      "m07_lstm_prob": 0.0119,
+      "m07_normalized_risk": 0.501,
+      "composite_url_risk": 0.6259
+    },
+    "visual_models": {
+      "m02_resnet_prob": null,
+      "total_fused_elements": 0,
+      "fused_class_counts": {
+        "brand_logo": 0,
+        "login_form": 0,
+        "username_field": 0,
+        "password_field": 0,
+        "submit_button": 0,
+        "payment_element": 0
+      },
+      "raw_detector_counts": {
+        "M-04_yolov8n": 0,
+        "M-05_faster_rcnn": 0,
+        "M-06_yolov8_seg": 0
+      }
+    },
+    "explanation": "Visual capture unavailable, and combined URL risk (0.63) is ambiguous. Preserving UNKNOWN / INSUFFICIENT EVIDENCE state.",
+    "preview_saved": null
+  }
+]
