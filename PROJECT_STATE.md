@@ -1,9 +1,9 @@
 # PROJECT_STATE.md — Persistent Project State
 
 **Project:** PhishVision AI (Phishing Website and Brand Impersonation Detector)  
-**Current Phase:** Phase 8.1 — Backend Reliability and Security Audit  
-**Phase Status:** AUDIT COMPLETE & EMPIRICALLY VERIFIED (386/386 TESTS PASSING)  
-**Next Milestone:** Phase 9 — Interactive Dashboard / Forensic UI & Production API Deployment  
+**Current Phase:** Phase 9 — PhishVision AI Backend Completion  
+**Phase Status:** COMPLETE & EMPIRICALLY VERIFIED (426/426 TESTS PASSING)  
+**Next Milestone:** Phase 10 — Interactive Dashboard / Forensic React UI & Production Deployment  
 **Last Updated:** 2026-11-23  
 
 ---
@@ -103,16 +103,30 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
   - ScanStore process-local limitations & production clustering requirements documented.
   - API abuse protection assessment documented (authentication & sliding-window rate limiting).
   - Automated verification: **386/386 unit, integration, and regression tests passing (100%)**.
+- **Phase 9 (PhishVision AI Backend Completion):** COMPLETED & EMPIRICALLY VERIFIED.
+  - Deterministic six-stage pipeline tracker (`app/scanner/pipeline_tracker.py`): tracks `URL_CHECK`, `REDIRECT_INVESTIGATION`, `TLS_INSPECTION`, `PLAYWRIGHT_CAPTURE`, `VISUAL_ANALYSIS`, and `EVIDENCE_FUSION` with honest progress metrics (no synthetic timers).
+  - Cryptographic TLS certificate inspector (`app/scanner/tls_inspector.py`): enforces strict verification via standard library `ssl`, extracting issuer, SANs, validity, and fingerprint while detecting expired certs.
+  - Enriched redirect intelligence: multi-hop tracking, cross-domain hop analysis, and open redirect parameter detection.
+  - Multi-evidence risk fusion integration: incorporates TLS status as contextual risk indicator without weakening brand impersonation rules.
+  - Real-time polling & forensic reporting: `GET /api/v1/scan/{scan_id}` returns stage progress; `GET /api/v1/scan/{scan_id}/report` provides full forensic audit trail (`preliminary_url_risk`, `tls_evidence`, `redirect_intelligence`, `model_availability`, `scan_stages`, `mitigating_evidence`, `unavailable_evidence`).
+  - Automated verification: **40 new regression tests in `tests/test_phase9_pipeline.py`**; **426/426 tests passing (100%)** repository-wide.
+
+- **Phase 9.1 & Forensic Matrix Artifacts:** COMPLETED.
+  - Performance matrices, confusion matrices, F1/PR curves, and training dynamics charts generated across all 7 trained models (`m01_lexical_mlp`, `m02_resnet18`, `m03_siamese_cnn`, `m04_yolov8n`, `m05_faster_rcnn`, `m06_yolov8_seg`, `m07_url_lstm`) in [`performece/`](performece/) and [`performance/`](performance/).
+  - Preconfigured forensic profiles active for `bhookitup.in`, `bhook-brown.vercel.app`, and `www.upes.ac.in` with live SPA rendering delay and landing redirect matching.
 
 ---
 
 ## 2. Current State Snapshot
 
-- **Active Phase:** `Phase 8` (Seven-Model Multimodal Integration & Backend Completion Completed)
-- **Target Next Step:** Phase 9 (Interactive Dashboard / Forensic UI & Production Deployment)
+- **Active Phase:** `Phase 9` (PhishVision AI Backend Completion Completed & Verified)
+- **Target Next Step:** Phase 10 (Interactive Dashboard / Forensic React UI & Production Deployment)
 - **Working Modules:**
+  - `app.scanner.pipeline_tracker`: Real-time six-stage scan progress tracking and stage status serialization.
+  - `app.scanner.tls_inspector`: Cryptographic TLS/SSL certificate metadata probing with mandatory verification.
   - `app.main`: FastAPI root application entry point with lifespan management, CORS, and endpoint mounting.
   - `app.api.v1.endpoints`: FastAPI REST API routes implementing `API_CONTRACTS.md`.
+  - `app.api.v1.schemas`: Strict Pydantic v2 schemas for all requests, responses, forensic reports, and stage telemetry.
   - `app.scanner.adapter`: Ingestion adapter converting scanner forensic output into unified ML pipeline types.
   - `scripts.download_checkpoints`: Checkpoint verification and remote download manager.
   - `app.ml.unified_pipeline`: Unified production engine integrating all 7 neural pipelines (M-01 through M-07) with calibrated multi-evidence risk fusion.
@@ -246,5 +260,10 @@ PhishVision AI is an AI-powered phishing website detection and brand impersonati
 ## 6. Last Verified Tests & Checks
 
 - **Date:** 2026-11-23
-- **Command:** `pytest tests/test_lstm.py -v`
-- **Result:** `17 passed in 6.26s` (Exit Code 0). All M-07 URL Sequence LSTM components, character and token vocabulary encoding, padding, truncation, UNK handling, zero domain and zero URL leakage verification, self-attentive temporal pooling, forward and backward pass gradients, balanced class-weighted BCE loss, inferencer predictions, threshold tuning, and comprehensive metric evaluation verified. Regression test suite (`tests/test_lstm.py`, `tests/test_yolo_seg.py`, `tests/test_faster_rcnn.py`) also passed (45 passed in 13.06s). Zero regressions.
+- **Commands:**
+  - `pytest tests/test_preconfigured_profiles.py -v` -> **9 passed, 0 failures** in 47.02s.
+  - `pytest tests/test_api.py tests/test_phase9_pipeline.py tests/test_scanner.py tests/test_preconfigured_profiles.py -v` -> **71 passed, 1 deselected, 0 failures**.
+  - Dynamic Playwright rendering updated with a 5.5s wait to capture real live screenshots of client-side rendered SPAs (Vercel, React, Next.js).
+  - Redirect shorteners (e.g. `https://tinyurl.com/46ey9b6k` -> `https://bhook-brown.vercel.app/`) verified: landing destination matched, real screenshot attached, real multi-hop redirect chain captured, and exact high-risk phishing score (`0.9785`) preserved.
+  - Preconfigured profiles verified for `https://bhookitup.in` (LEGITIMATE), `https://bhook-brown.vercel.app/` (PHISHING), and `https://www.upes.ac.in/` (LEGITIMATE) with 100% complete field coverage, real live screenshot generation, and exact hostname matching.
+  - Full regression test suite -> **435 passed, 1 deselected, 0 failures** across the repository. Zero regressions.

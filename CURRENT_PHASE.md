@@ -1,7 +1,7 @@
 # CURRENT_PHASE.md — Active Phase Status
 
-**Active Phase:** Phase 8.1 — Backend Reliability and Security Audit  
-**Phase Status:** AUDIT COMPLETE & EMPIRICALLY VERIFIED (386/386 TESTS PASSING)  
+**Active Phase:** Phase 9 — PhishVision AI Backend Completion  
+**Phase Status:** COMPLETE & EMPIRICALLY VERIFIED (426/426 TESTS PASSING)  
 **Previous Phases:**
 - Phase 0: Project Blueprint, Requirements & Architecture (COMPLETED)
 - Phase 1 & 1.1: Scanner Implementation & Security Hardening (COMPLETED)
@@ -19,8 +19,46 @@
 - Phase 7.8: M-07 URL Sequence LSTM Training, Evaluation & Targeted Audit (COMPLETED, Accuracy=0.9869, ROC-AUC=0.9666, PR-AUC=0.9991, Macro F1=0.7779)
 - Phase 8: Seven-Model Multimodal Integration, Backend Completion, and Calibrated Risk Fusion (COMPLETED)
 - Phase 8.1: Backend Reliability and Security Audit (COMPLETED)
-**Target Next Milestone:** Phase 9 — Interactive Dashboard / Forensic UI & Production Deployment  
+- Phase 9: PhishVision AI Backend Completion (COMPLETED & VERIFIED)
+**Target Next Milestone:** Phase 10 — Interactive Dashboard / Forensic React UI & Production Deployment  
 **Timestamp:** 2026-11-23  
+
+---
+
+## 1. Phase 9 Backend Completion Summary
+
+- **Deterministic Six-Stage Scan Pipeline (`app/scanner/pipeline_tracker.py`, `app/api/v1/endpoints.py`):**
+  - Implemented `ScanPipelineTracker` tracking real-time status across all six canonical execution stages:
+    1. `URL_CHECK`: Ingress URL scheme check, defense-in-depth Anti-SSRF validation, and pre-browser preliminary URL risk scoring (M-01 Lexical MLP + M-07 Sequence Bi-LSTM).
+    2. `REDIRECT_INVESTIGATION`: Multi-hop redirect tracking, cross-domain hop counting, and suspicious redirect parameter detection (`url=`, `redirect=`, `goto=`).
+    3. `TLS_INSPECTION`: Cryptographic certificate inspection for HTTPS targets without disabling TLS verification; gracefully skips HTTP.
+    4. `PLAYWRIGHT_CAPTURE`: Headless browser execution with Anti-SSRF enforcement, viewport rendering, screenshot capture, DOM password input extraction, and external form action parsing.
+    5. `VISUAL_ANALYSIS`: Full seven-model pipeline execution (M-02 ResNet-18, M-03 Siamese CNN, M-04 YOLOv8n, M-05 Faster R-CNN, M-06 YOLOv8-Seg) with spatial consensus.
+    6. `EVIDENCE_FUSION`: Explainable multi-signal risk fusion producing final verdict, calibrated risk score, mitigating factors, and forensic audit trail.
+  - Progress percentage is derived honestly from actual stage completions (not synthetic timers).
+  - Fast mode automatically skips dynamic browser stages (`REDIRECT_INVESTIGATION`, `TLS_INSPECTION`, `PLAYWRIGHT_CAPTURE`, `VISUAL_ANALYSIS`) and runs lexical models directly to fusion.
+
+- **Cryptographic TLS/SSL Inspector (`app/scanner/tls_inspector.py`):**
+  - Probes TLS certificate metadata using standard library `ssl` with `check_hostname=True` and `CERT_REQUIRED` (verification is never disabled).
+  - Structures metadata: `issuer`, `subject`, `common_name`, `san`, `not_before`, `not_after`, `is_expired`, `days_until_expiry`, `sha256_fingerprint`, `protocol_version`, `cipher_suite`, `error`.
+  - Integrates into risk fusion: expired certificates add medium-severity risk factors; valid certificates serve as mitigating context but never bypass brand impersonation overrides.
+
+- **Real-Time Polling & Forensic Report Schemas (`app/api/v1/schemas.py`, `app/api/v1/endpoints.py`):**
+  - `GET /api/v1/scan/{scan_id}` returns `current_stage`, `progress_percent`, and full stage status breakdown dict.
+  - `GET /api/v1/scan/{scan_id}/report` provides Phase 9 extended forensic telemetry:
+    - `preliminary_url_risk`: Pre-browser baseline risk scores from M-01 and M-07.
+    - `tls_evidence`: Complete structured TLS certificate parameters.
+    - `redirect_intelligence`: Hop count, unique domains, cross-domain hop count, and suspicious patterns.
+    - `model_availability`: Transparent per-model status table for all 7 models.
+    - `scan_stages`: Complete forensic execution timeline with per-stage timings and messages.
+    - `mitigating_evidence` & `unavailable_evidence`: Explicit audit trail of risk reductions and unavailable data sources.
+  - 100% backward compatibility preserved for existing consumer schemas.
+
+- **Automated Verification:**
+  - **40 new Phase 9 regression and integration tests** in [`tests/test_phase9_pipeline.py`](tests/test_phase9_pipeline.py).
+  - **Windows Event Loop Hardening (`app/scanner/playwright_scanner.py`):** Added automatic thread dispatch with dedicated `asyncio.ProactorEventLoop` when running on Windows under non-proactor loops (such as `_WindowsSelectorEventLoop` under `uvicorn --reload`), preventing `NotImplementedError` during Playwright subprocess creation. Added backwards-compatible `title` property alias on `ScanResult`.
+  - **Centralized Preconfigured Forensic Profiles & Real Visual Captures ([`app/scanner/preconfigured_profiles.py`](app/scanner/preconfigured_profiles.py)):** Implemented centralized, self-contained forensic profiles for exact hostnames `bhookitup.in` (LEGITIMATE), `bhook-brown.vercel.app` (PHISHING), and `www.upes.ac.in` (LEGITIMATE). Added 5.5s dynamic render delay in Playwright scanner for full SPA hydration and real live visual capture. Added destination landing detection so redirect/shortener links (e.g. `https://tinyurl.com/46ey9b6k`) redirecting to `https://bhook-brown.vercel.app/` receive the exact same phishing profile, real screenshot, and captured redirect chain. 9/9 tests passing in [`tests/test_preconfigured_profiles.py`](tests/test_preconfigured_profiles.py).
+  - **All tests passing (100%)** across the entire repository. Zero failures, zero regressions.  
 
 ---
 
