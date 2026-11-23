@@ -225,6 +225,28 @@ class PlaywrightScanner:
 
     async def scan(self, url: str, options: ScanOptions | None = None) -> ScanResult:
         """Asynchronously scan a target URL with Anti-SSRF proxy enforcement and secure TLS checking."""
+        if sys.platform == "win32":
+            try:
+                loop = asyncio.get_running_loop()
+                # On Windows, async subprocess creation (required by Playwright) requires ProactorEventLoop.
+                # Under reloaders (like uvicorn --reload), a SelectorEventLoop is installed, which lacks
+                # subprocess support and raises NotImplementedError.
+                is_proactor = isinstance(loop, getattr(asyncio, "ProactorEventLoop", ()))
+                if not is_proactor:
+                    def _runner() -> ScanResult:
+                        p_loop = asyncio.ProactorEventLoop()
+                        asyncio.set_event_loop(p_loop)
+                        try:
+                            return p_loop.run_until_complete(self._scan_impl(url, options))
+                        finally:
+                            p_loop.close()
+
+                    return await asyncio.to_thread(_runner)
+            except Exception:
+                pass
+        return await self._scan_impl(url, options)
+
+    async def _scan_impl(self, url: str, options: ScanOptions | None = None) -> ScanResult:
         scan_id = str(uuid.uuid4())
         opts = options or ScanOptions()
         start_time = time.perf_counter()
@@ -405,6 +427,14 @@ class PlaywrightScanner:
                 # -------------------------------------------------------------
                 # 5. Capture Screenshots & Rendered DOM Evidence
                 # -------------------------------------------------------------
+                # Allow dynamic client-side JS / SPAs (Vercel, React, Next.js) 5-6 seconds
+                # to complete client-side hydration, fetch assets, and render full UI before capture
+                if status in (ScanStatus.COMPLETED, ScanStatus.TIMED_OUT):
+                    try:
+                        await page.wait_for_timeout(5500)
+                    except Exception:
+                        await asyncio.sleep(5.5)
+
                 viewport_shot_path: str | None = None
                 fullpage_shot_path: str | None = None
                 dom_path: str | None = None
@@ -503,6 +533,22 @@ class PlaywrightScanner:
 
     def scan_sync(self, url: str, options: ScanOptions | None = None) -> ScanResult:
         """Synchronous wrapper around the async scan implementation."""
+        if sys.platform == "win32":
+            def _runner() -> ScanResult:
+                p_loop = asyncio.ProactorEventLoop()
+                asyncio.set_event_loop(p_loop)
+                try:
+                    return p_loop.run_until_complete(self._scan_impl(url, options))
+                finally:
+                    p_loop.close()
+
+            try:
+                return asyncio.run(self.scan(url, options))
+            except RuntimeError:
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    return pool.submit(_runner).result()
+
         try:
             return asyncio.run(self.scan(url, options))
         except RuntimeError:

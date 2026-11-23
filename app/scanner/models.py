@@ -63,7 +63,7 @@ class ScanOptions(BaseModel):
     """Configuration options for Playwright scanner execution."""
     viewport_width: int = Field(default=1280, ge=320, le=3840)
     viewport_height: int = Field(default=720, ge=240, le=2160)
-    timeout_seconds: int = Field(default=15, ge=3, le=60)
+    timeout_seconds: int = Field(default=25, ge=3, le=60)
     headless: bool = Field(default=True, description="Run browser in headless mode")
     capture_full_page: bool = Field(default=True)
     user_agent: str | None = Field(default=None)
@@ -121,3 +121,8 @@ class ScanResult(BaseModel):
     errors: list[str] = Field(default_factory=list, description="Errors encountered during scanning")
     warnings: list[str] = Field(default_factory=list, description="Warnings or non-fatal security flags")
     security_metadata: dict[str, Any] = Field(default_factory=dict, description="Resolved IP, pinned IP, and anti-SSRF verification details")
+
+    @property
+    def title(self) -> str | None:
+        """Alias for page_title for backwards compatibility."""
+        return self.page_title
