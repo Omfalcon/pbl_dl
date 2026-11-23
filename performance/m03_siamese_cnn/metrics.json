@@ -1,0 +1,29 @@
+{
+  "model_id": "M-03",
+  "model_name": "Siamese CNN Brand Impersonation Matcher",
+  "architecture": "Shared-Weight ResNet-18 Stem + 256-d L2-Normalized Embedding Head",
+  "dataset_split": "Held-Out Test Pairs (data/splits/siamese/test.parquet)",
+  "holdout_brands": [
+    "amazon",
+    "netflix",
+    "google"
+  ],
+  "total_test_pairs": 20,
+  "calibrated_threshold": 0.82,
+  "metrics": {
+    "accuracy": 0.85,
+    "precision": 1.0,
+    "recall": 0.625,
+    "f1_score": 0.7692,
+    "roc_auc": 0.875,
+    "pr_auc": 0.8629,
+    "false_positives": 0,
+    "false_negatives": 3
+  },
+  "confusion_matrix": {
+    "true_negative": 12,
+    "false_positive": 0,
+    "false_negative": 3,
+    "true_positive": 5
+  }
+}

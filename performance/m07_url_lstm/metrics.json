@@ -1,0 +1,25 @@
+{
+  "model_id": "M-07",
+  "model_name": "URL Sequence Character Bi-LSTM",
+  "architecture": "Embedding(64) -> Bi-LSTM(2x128) -> Self-Attentive Pooling -> Dense(64) -> Dense(1)",
+  "dataset_split": "Holdout Test Split (data/splits/tabular/test.parquet)",
+  "total_test_samples": 4257,
+  "calibrated_threshold": 0.01,
+  "inference_latency_ms": 0.072,
+  "metrics": {
+    "accuracy": 0.98685,
+    "macro_f1": 0.77791,
+    "macro_precision": 0.88584,
+    "macro_recall": 0.71831,
+    "roc_auc": 0.9666,
+    "pr_auc": 0.99913,
+    "phishing_f1": 0.99332,
+    "legitimate_f1": 0.5625
+  },
+  "confusion_matrix": {
+    "true_negative": 36,
+    "false_positive": 46,
+    "false_negative": 10,
+    "true_positive": 4165
+  }
+}

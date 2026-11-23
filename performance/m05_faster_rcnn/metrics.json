@@ -1,0 +1,153 @@
+{
+  "model_id": "M-05",
+  "model_name": "Faster R-CNN Object Detector",
+  "architecture": "Faster R-CNN ResNet-50-FPN (41.5M params)",
+  "dataset_split": "Synthetic UI Test Partition (114 images)",
+  "metrics": {
+    "mAP50": 1.0,
+    "mAP50_95": 0.9806,
+    "mean_precision": 0.9925,
+    "mean_recall": 1.0,
+    "mean_latency_ms": 129.12,
+    "peak_vram_mb": 1065.08
+  },
+  "class_metrics": {
+    "0": {
+      "class_id": 0,
+      "faster_rcnn_class_id": 1,
+      "class_name": "brand_logo",
+      "total_ground_truth": 114,
+      "total_detections": 114,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "mAP50": 1.0,
+      "mAP50_95": 0.8905
+    },
+    "1": {
+      "class_id": 1,
+      "faster_rcnn_class_id": 2,
+      "class_name": "login_form",
+      "total_ground_truth": 114,
+      "total_detections": 114,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "mAP50": 1.0,
+      "mAP50_95": 0.9971
+    },
+    "2": {
+      "class_id": 2,
+      "faster_rcnn_class_id": 3,
+      "class_name": "username_field",
+      "total_ground_truth": 105,
+      "total_detections": 105,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "mAP50": 1.0,
+      "mAP50_95": 0.9989
+    },
+    "3": {
+      "class_id": 3,
+      "faster_rcnn_class_id": 4,
+      "class_name": "password_field",
+      "total_ground_truth": 105,
+      "total_detections": 106,
+      "precision": 0.9906,
+      "recall": 1.0,
+      "f1_score": 0.9953,
+      "mAP50": 1.0,
+      "mAP50_95": 1.0
+    },
+    "4": {
+      "class_id": 4,
+      "faster_rcnn_class_id": 5,
+      "class_name": "submit_button",
+      "total_ground_truth": 114,
+      "total_detections": 114,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "mAP50": 1.0,
+      "mAP50_95": 0.9969
+    },
+    "5": {
+      "class_id": 5,
+      "faster_rcnn_class_id": 6,
+      "class_name": "payment_element",
+      "total_ground_truth": 27,
+      "total_detections": 28,
+      "precision": 0.9643,
+      "recall": 1.0,
+      "f1_score": 0.9818,
+      "mAP50": 1.0,
+      "mAP50_95": 1.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      1
+    ],
+    [
+      0,
+      114,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      114,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      105,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      105,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      114,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      27
+    ]
+  ]
+}

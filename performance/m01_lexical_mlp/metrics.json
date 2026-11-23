@@ -1,0 +1,24 @@
+{
+  "model_id": "M-01",
+  "model_name": "Lexical URL Multi-Layer Perceptron",
+  "architecture": "Dense MLP (40 -> 64 -> 32 -> 1) with Scratch Autograd & Adam",
+  "dataset_split": "Holdout Test Split (data/splits/tabular/test.parquet)",
+  "total_test_samples": 4257,
+  "calibrated_threshold": 0.05,
+  "metrics": {
+    "accuracy": 0.98661,
+    "macro_f1": 0.82386,
+    "macro_precision": 0.82195,
+    "macro_recall": 0.8258,
+    "roc_auc": 0.97729,
+    "pr_auc": 0.99952,
+    "phishing_f1": 0.99317,
+    "legitimate_f1": 0.65455
+  },
+  "confusion_matrix": {
+    "true_positive": 4146,
+    "false_positive": 28,
+    "true_negative": 54,
+    "false_negative": 29
+  }
+}

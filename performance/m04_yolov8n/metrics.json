@@ -1,0 +1,47 @@
+{
+  "model_id": "M-04",
+  "model_name": "YOLOv8n UI Component & Logo Detector",
+  "architecture": "Ultralytics YOLOv8n (Nano, 3.2M params)",
+  "dataset_split": "Synthetic UI Test Partition (data/synthetic_yolo/images/test)",
+  "classes": [
+    "brand_logo",
+    "login_form",
+    "username_field",
+    "password_field",
+    "submit_button",
+    "payment_element"
+  ],
+  "metrics": {
+    "mAP50": 0.995,
+    "mAP50_95": 0.9699,
+    "mean_precision": 0.9973,
+    "mean_recall": 1.0,
+    "mean_f1": 0.9986
+  },
+  "per_class": {
+    "brand_logo": {
+      "f1": 0.9998,
+      "mAP50_95": 0.8462
+    },
+    "login_form": {
+      "f1": 0.999,
+      "mAP50_95": 0.995
+    },
+    "username_field": {
+      "f1": 0.9993,
+      "mAP50_95": 0.995
+    },
+    "password_field": {
+      "f1": 0.9991,
+      "mAP50_95": 0.9932
+    },
+    "submit_button": {
+      "f1": 0.9992,
+      "mAP50_95": 0.995
+    },
+    "payment_element": {
+      "f1": 0.9955,
+      "mAP50_95": 0.995
+    }
+  }
+}

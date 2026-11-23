@@ -1,0 +1,47 @@
+{
+  "timestamp": "2026-11-23",
+  "models": {
+    "M-01": {
+      "name": "Lexical URL MLP",
+      "macro_f1": 0.8239,
+      "accuracy": 0.9866,
+      "roc_auc": 0.9773
+    },
+    "M-02": {
+      "name": "ResNet-18 Global Classifier",
+      "macro_f1": 0.7037,
+      "accuracy": 0.8359,
+      "roc_auc": 0.8846
+    },
+    "M-03": {
+      "name": "Siamese Brand Matcher",
+      "macro_f1": 0.7692,
+      "accuracy": 0.85,
+      "roc_auc": 0.875
+    },
+    "M-04": {
+      "name": "YOLOv8n UI Detector",
+      "mean_f1": 0.9986,
+      "mAP50": 0.995,
+      "mAP50_95": 0.9699
+    },
+    "M-05": {
+      "name": "Faster R-CNN Detector",
+      "mean_f1": 0.9954,
+      "mAP50": 1.0,
+      "mAP50_95": 0.9806
+    },
+    "M-06": {
+      "name": "YOLOv8n-Seg Segmenter",
+      "box_mAP50": 0.995,
+      "mask_mAP50": 0.995,
+      "mean_f1": 0.995
+    },
+    "M-07": {
+      "name": "URL Sequence Bi-LSTM",
+      "macro_f1": 0.7779,
+      "accuracy": 0.9869,
+      "roc_auc": 0.9666
+    }
+  }
+}
