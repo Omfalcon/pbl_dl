@@ -265,6 +265,21 @@ class TestPlaywrightScannerSecurityHardening:
             assert mock_context.close.called
             assert mock_browser.close.called
 
+    @pytest.mark.asyncio
+    async def test_selector_loop_proactor_fallback(self, tmp_path):
+        """Verify scanner dispatches cleanly when running under a non-Proactor loop on Windows."""
+        scanner = PlaywrightScanner(screenshot_dir=tmp_path / "shots", dom_dir=tmp_path / "dom")
+        with patch("app.scanner.playwright_scanner.validate_url_and_resolve") as mock_val:
+            mock_val.return_value = MagicMock(
+                is_valid=False,
+                error_message="Private IP blocked",
+                error_code="SSRF_PRIVATE_IP",
+                resolved_ips=["127.0.0.1"],
+            )
+            # Test that scanner.scan returns BLOCKED_SSRF without crashing
+            result = await scanner.scan("http://127.0.0.1")
+            assert result.status == ScanStatus.BLOCKED_SSRF
+
 
 class TestIntegrationLiveScan:
     """Integration test suite executing real browser automation against public targets."""
