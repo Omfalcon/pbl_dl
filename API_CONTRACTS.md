@@ -1,9 +1,9 @@
 # API_CONTRACTS.md — REST API Contracts & Data Schemas
 
 **Project:** PhishVision AI (Phishing Website and Brand Impersonation Detector)  
-**Status:** Approved for Baseline Architecture (Phase 0)  
+**Status:** Frozen & Fully Implemented (Phase 9)  
 **Base URL:** `/api/v1`  
-**Last Updated:** 2026-11-22  
+**Last Updated:** 2026-11-23  
 
 ---
 
@@ -11,14 +11,36 @@
 
 | Method | Endpoint | Description | Status Codes |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/scan` | Submits a target URL for scanning and risk analysis. | `200 OK`, `202 Accepted`, `400 Bad Request`, `429 Too Many Requests` |
-| `GET` | `/api/v1/scan/{scan_id}` | Polls the current status of an ongoing or completed scan. | `200 OK`, `404 Not Found` |
-| `GET` | `/api/v1/scan/{scan_id}/report` | Retrieves the full, explainable security report for a scan. | `200 OK`, `404 Not Found`, `425 Too Early` |
-| `GET` | `/api/v1/scan/{scan_id}/screenshot` | Returns a static image preview of the captured viewport. | `200 OK`, `404 Not Found` |
-| `POST` | `/api/v1/analyze/url` | Synchronous lexical URL and domain intelligence only. | `200 OK`, `400 Bad Request` |
-| `POST` | `/api/v1/analyze/brand-similarity` | Compares an uploaded image/logo against reference brands. | `200 OK`, `400 Bad Request` |
-| `GET` | `/api/v1/brands` | Lists all monitored reference brands and protected domains. | `200 OK` |
-| `GET` | `/api/v1/health` | System health check and model loading state. | `200 OK`, `503 Service Unavailable` |
+| `POST` | `/api/v1/scan` | Submits a target URL for automated six-stage scanning and risk analysis. | `202 Accepted`, `400 Bad Request` |
+| `GET` | `/api/v1/scan/{scan_id}` | Polls the current real-time stage progress and status of an ongoing or completed scan. | `200 OK`, `404 Not Found` |
+| `GET` | `/api/v1/scan/{scan_id}/report` | Retrieves the full, explainable forensic security report for a completed scan. | `200 OK`, `404 Not Found`, `425 Too Early`, `500 Internal Server Error` |
+| `GET` | `/api/v1/scan/{scan_id}/screenshot` | Returns the captured PNG screenshot of the rendered webpage. | `200 OK`, `404 Not Found` |
+| `POST` | `/api/v1/analyze/url` | Fast synchronous lexical and sequence URL intelligence (M-01 + M-07). | `200 OK`, `400 Bad Request` |
+| `POST` | `/api/v1/analyze/brand-similarity` | Uploads an image for Siamese CNN brand comparison against reference gallery. | `200 OK`, `400 Bad Request`, `413 Payload Too Large`, `500 Internal Server Error`, `503 Service Unavailable` |
+| `GET` | `/api/v1/brands` | Lists all 18 monitored reference brands, official domains, and authorized subdomains. | `200 OK` |
+| `GET` | `/api/v1/health` | Comprehensive system health check, device information, and per-model checkpoint status. | `200 OK`, `503 Service Unavailable` |
+
+---
+
+## 1.1 Six-Stage Scan Pipeline Lifecycle
+
+The asynchronous scan job executes the following six stages in deterministic sequence:
+
+```mermaid
+flowchart LR
+    S1[1. URL_CHECK] --> S2[2. REDIRECT_INVESTIGATION]
+    S2 --> S3[3. TLS_INSPECTION]
+    S3 --> S4[4. PLAYWRIGHT_CAPTURE]
+    S4 --> S5[5. VISUAL_ANALYSIS]
+    S5 --> S6[6. EVIDENCE_FUSION]
+```
+
+1. **`URL_CHECK`**: Anti-SSRF URL validation, DNS resolution pinning, and preliminary pre-browser lexical scoring (M-01 Lexical MLP + M-07 Sequence Bi-LSTM).
+2. **`REDIRECT_INVESTIGATION`**: Multi-hop redirect tracking, cross-domain hop analysis, and suspicious redirect parameter detection (`url=`, `redirect=`, `goto=`).
+3. **`TLS_INSPECTION`**: Cryptographic certificate inspection for HTTPS targets (issuer DN, SANs, validity dates, SHA-256 fingerprint, expired cert detection). Skipped for HTTP.
+4. **`PLAYWRIGHT_CAPTURE`**: Headless browser rendering, full viewport screenshot capture, DOM password input extraction, and external form action parsing.
+5. **`VISUAL_ANALYSIS`**: Global layout classification (M-02 ResNet-18), Siamese brand matching (M-03), and object detection & segmentation (M-04 YOLOv8n, M-05 Faster R-CNN, M-06 YOLOv8-Seg) with spatial consensus.
+6. **`EVIDENCE_FUSION`**: Multi-signal risk fusion synthesizing URL, TLS, visual, and behavioral evidence into a calibrated risk score, threat category, and explainable forensic narrative.
 
 ---
 
@@ -221,14 +243,88 @@
 
 ### 2.3 Master Assessment & Risk Fusion Schema
 
-#### `ScanReport`
+#### `ScanStatusResponse` (Polling `/api/v1/scan/{scan_id}`)
+```json
+{
+  "type": "object",
+  "required": ["scan_id", "status", "target_url", "timestamp", "poll_url"],
+  "properties": {
+    "scan_id": { "type": "string", "format": "uuid" },
+    "status": { "type": "string", "enum": ["IN_PROGRESS", "COMPLETED", "FAILED", "BLOCKED_SSRF"] },
+    "target_url": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "current_stage": { "type": ["string", "null"], "enum": ["URL_CHECK", "REDIRECT_INVESTIGATION", "TLS_INSPECTION", "PLAYWRIGHT_CAPTURE", "VISUAL_ANALYSIS", "EVIDENCE_FUSION", null] },
+    "progress_percent": { "type": "number", "minimum": 0.0, "maximum": 100.0 },
+    "stages": {
+      "type": "object",
+      "description": "Map of stage name to ScanStageProgress object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "status": { "type": "string", "enum": ["PENDING", "IN_PROGRESS", "COMPLETED", "FAILED", "SKIPPED", "UNAVAILABLE"] },
+          "started_at": { "type": ["string", "null"] },
+          "completed_at": { "type": ["string", "null"] },
+          "duration_ms": { "type": ["number", "null"] },
+          "message": { "type": "string" },
+          "error": { "type": ["string", "null"] },
+          "data": { "type": "object" }
+        }
+      }
+    },
+    "poll_url": { "type": "string" },
+    "report_url": { "type": ["string", "null"] },
+    "final_verdict": { "type": ["string", "null"] },
+    "risk_score": { "type": ["number", "null"] }
+  }
+}
+```
+
+#### `TLSEvidenceReport`
+```json
+{
+  "type": "object",
+  "properties": {
+    "tls_available": { "type": "boolean" },
+    "certificate_valid": { "type": "boolean" },
+    "issuer": { "type": ["string", "null"] },
+    "subject": { "type": ["string", "null"] },
+    "common_name": { "type": ["string", "null"] },
+    "san": { "type": "array", "items": { "type": "string" } },
+    "not_before": { "type": ["string", "null"] },
+    "not_after": { "type": ["string", "null"] },
+    "is_expired": { "type": "boolean" },
+    "days_until_expiry": { "type": ["integer", "null"] },
+    "sha256_fingerprint": { "type": ["string", "null"] },
+    "protocol_version": { "type": ["string", "null"] },
+    "cipher_suite": { "type": ["string", "null"] },
+    "error": { "type": ["string", "null"] }
+  }
+}
+```
+
+#### `RedirectIntelligenceReport`
+```json
+{
+  "type": "object",
+  "properties": {
+    "hop_count": { "type": "integer" },
+    "unique_domains": { "type": "array", "items": { "type": "string" } },
+    "cross_domain_hop_count": { "type": "integer" },
+    "has_cross_domain_redirects": { "type": "boolean" },
+    "suspicious_redirect_patterns": { "type": "array", "items": { "type": "string" } }
+  }
+}
+```
+
+#### `ScanReport` (Full Forensic Assessment `/api/v1/scan/{scan_id}/report`)
 ```json
 {
   "type": "object",
   "required": ["scan_id", "status", "target_url", "timestamp", "risk_assessment"],
   "properties": {
     "scan_id": { "type": "string", "format": "uuid" },
-    "status": { "type": "string", "enum": ["COMPLETED", "FAILED", "IN_PROGRESS", "TIMED_OUT"] },
+    "status": { "type": "string", "enum": ["COMPLETED", "FAILED", "BLOCKED_SSRF"] },
     "target_url": { "type": "string" },
     "timestamp": { "type": "string", "format": "date-time" },
     "elapsed_seconds": { "type": "number" },
@@ -238,7 +334,7 @@
       "properties": {
         "category": {
           "type": "string",
-          "enum": ["LEGITIMATE", "SUSPICIOUS", "PHISHING", "UNKNOWN / INSUFFICIENT EVIDENCE"]
+          "enum": ["LEGITIMATE", "SUSPICIOUS", "PHISHING", "CRITICAL_PHISHING", "UNKNOWN / INSUFFICIENT EVIDENCE", "BLOCKED_SSRF"]
         },
         "risk_score": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
         "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
@@ -251,7 +347,7 @@
               "vector": { "type": "string" },
               "severity": { "type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"] },
               "description": { "type": "string" },
-              "evidence_ref": { "type": "string" }
+              "evidence_ref": { "type": ["string", "null"] }
             }
           }
         }
@@ -259,7 +355,45 @@
     },
     "url_intelligence": { "$ref": "#/properties/URLIntelligenceReport" },
     "visual_intelligence": { "$ref": "#/properties/VisualIntelligenceReport" },
-    "behavioral_intelligence": { "$ref": "#/properties/BehavioralReport" }
+    "behavioral_intelligence": { "$ref": "#/properties/BehavioralReport" },
+    "preliminary_url_risk": {
+      "type": ["object", "null"],
+      "properties": {
+        "m01_lexical_score": { "type": ["number", "null"] },
+        "m01_above_threshold": { "type": ["boolean", "null"] },
+        "m07_lstm_score": { "type": ["number", "null"] },
+        "composite_url_risk": { "type": ["number", "null"] },
+        "analysis_stage": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "tls_evidence": { "$ref": "#/properties/TLSEvidenceReport" },
+    "redirect_intelligence": { "$ref": "#/properties/RedirectIntelligenceReport" },
+    "model_availability": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "model_id": { "type": "string" },
+          "name": { "type": "string" },
+          "status": { "type": "string", "enum": ["LOADED", "MISSING", "UNKNOWN"] }
+        }
+      }
+    },
+    "scan_stages": {
+      "type": "object",
+      "description": "Forensic audit trail of all execution stages, timings, and statuses"
+    },
+    "mitigating_evidence": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "unavailable_evidence": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "explanation": { "type": ["string", "null"] },
+    "disclaimer": { "type": ["string", "null"] }
   }
 }
 ```

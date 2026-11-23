@@ -705,6 +705,7 @@ class UnifiedPhishingPipeline:
         visual_evidence: dict[str, Any],
         dom_evidence: dict[str, Any],
         target_domain: str,
+        tls_evidence: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Synthesizes risk score, category, and preserves UNKNOWN / INSUFFICIENT EVIDENCE.
 
@@ -715,6 +716,13 @@ class UnifiedPhishingPipeline:
         4. Capping 404 / empty error pages below phishing threshold.
         5. Clean visual and neutral domain protection.
         6. Missing visual telemetry fallback to UNKNOWN or decisive URL score.
+
+        TLS evidence is treated as a contextual signal:
+        - Valid TLS: mitigating factor (reduces risk slightly for borderline cases).
+        - Expired cert: MEDIUM risk contribution (+0.05 to risk in weighted fallback).
+        - Invalid cert (handshake failure): HIGH risk contribution (+0.10 to risk).
+        - TLS unavailable / HTTP: no contribution to fusion (reported as UNAVAILABLE).
+        Note: TLS alone NEVER proves legitimacy; it cannot override impersonation rules.
         """
         m01_res = url_evidence.get("m01_lexical", {})
         m07_res = url_evidence.get("m07_lstm", {})
@@ -940,15 +948,32 @@ class UnifiedPhishingPipeline:
             }
 
         combined_risk = round(sum(w * v for w, v in zip(weights, values)) / sum(weights), 4)
+
+        # Apply TLS context adjustment in the weighted fallback path only.
+        # TLS adjustment is bounded and cannot trigger an impersonation override.
+        tls_adjustment = 0.0
+        tls_note = ""
+        if tls_evidence:
+            if tls_evidence.get("is_expired"):
+                tls_adjustment = +0.05
+                tls_note = " Expired TLS certificate raises risk marginally (+0.05)."
+            elif tls_evidence.get("tls_available") and not tls_evidence.get("certificate_valid"):
+                tls_adjustment = +0.10
+                tls_note = " Invalid TLS certificate (handshake error) raises risk (+0.10)."
+            elif tls_evidence.get("certificate_valid"):
+                tls_adjustment = -0.03
+                tls_note = " Valid TLS certificate from trusted CA marginally mitigates risk (-0.03)."
+        combined_risk = round(max(0.0, min(1.0, combined_risk + tls_adjustment)), 4)
+
         if combined_risk >= 0.65:
             cat = "PHISHING"
-            exp = f"Elevated phishing risk ({combined_risk:.2f}) from combined URL and visual evidence."
+            exp = f"Elevated phishing risk ({combined_risk:.2f}) from combined URL and visual evidence.{tls_note}"
         elif combined_risk >= 0.35:
             cat = "SUSPICIOUS"
-            exp = f"Moderate suspicion ({combined_risk:.2f}). Anomalous domain or layout indicators."
+            exp = f"Moderate suspicion ({combined_risk:.2f}). Anomalous domain or layout indicators.{tls_note}"
         else:
             cat = "LEGITIMATE"
-            exp = f"Low risk profile ({combined_risk:.2f}). No credential harvesting or brand misuse detected."
+            exp = f"Low risk profile ({combined_risk:.2f}). No credential harvesting or brand misuse detected.{tls_note}"
 
         return {
             "threat_category": cat,

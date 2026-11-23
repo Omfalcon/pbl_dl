@@ -1,6 +1,6 @@
 """Pydantic Request & Response Schemas for PhishVision AI REST API.
 
-Strictly aligned with API_CONTRACTS.md specifications.
+Strictly aligned with API_CONTRACTS.md specifications (Phase 9).
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ class ViewportOptions(BaseModel):
 class ScanRequestOptions(BaseModel):
     fast_mode: bool = Field(default=False, description="If true, skips dynamic browser rendering and runs lexical URL models only")
     viewport: ViewportOptions = Field(default_factory=ViewportOptions)
-    timeout_seconds: int = Field(default=15, ge=3, le=30)
+    timeout_seconds: int = Field(default=25, ge=3, le=60)
 
 
 class ScanRequest(BaseModel):
@@ -130,6 +130,81 @@ class BehavioralReport(BaseModel):
     has_dom_password_field: bool = False
 
 
+# ---------------------------------------------------------------------------
+# Phase 9: New schema types
+# ---------------------------------------------------------------------------
+
+class ScanStageProgress(BaseModel):
+    """Real-time status of a single scan pipeline stage."""
+    name: str
+    status: str  # PENDING / IN_PROGRESS / COMPLETED / FAILED / SKIPPED / UNAVAILABLE
+    started_at: str | None = None
+    completed_at: str | None = None
+    duration_ms: float | None = None
+    message: str = ""
+    error: str | None = None
+    data: dict[str, Any] = Field(default_factory=dict)
+
+
+class TLSEvidenceReport(BaseModel):
+    """Structured TLS/SSL certificate inspection result."""
+    tls_available: bool = False
+    certificate_valid: bool = False
+    issuer: str | None = None
+    subject: str | None = None
+    common_name: str | None = None
+    san: list[str] = Field(default_factory=list)
+    not_before: str | None = None
+    not_after: str | None = None
+    is_expired: bool = False
+    days_until_expiry: int | None = None
+    sha256_fingerprint: str | None = None
+    protocol_version: str | None = None
+    cipher_suite: str | None = None
+    error: str | None = None
+
+
+class RedirectIntelligenceReport(BaseModel):
+    """Enriched redirect chain analysis."""
+    hop_count: int = 0
+    unique_domains: list[str] = Field(default_factory=list)
+    cross_domain_hop_count: int = 0
+    has_cross_domain_redirects: bool = False
+    suspicious_redirect_patterns: list[str] = Field(default_factory=list)
+
+
+class ModelAvailabilityReport(BaseModel):
+    """Per-model checkpoint status."""
+    model_id: str
+    name: str
+    status: str  # LOADED / MISSING / UNKNOWN
+
+
+class PreliminaryURLRisk(BaseModel):
+    """URL risk scored before browser rendering (Stage 1 output)."""
+    m01_lexical_score: float | None = None
+    m01_above_threshold: bool | None = None
+    m07_lstm_score: float | None = None
+    composite_url_risk: float | None = None
+    analysis_stage: str = "pre_browser"
+    note: str | None = None
+
+
+class ScanStatusResponse(BaseModel):
+    """Response schema for GET /api/v1/scan/{scan_id}."""
+    scan_id: str
+    status: str
+    target_url: str
+    timestamp: str
+    current_stage: str | None = None
+    progress_percent: float = 0.0
+    stages: dict[str, Any] = Field(default_factory=dict)
+    poll_url: str
+    report_url: str | None = None
+    final_verdict: str | None = None
+    risk_score: float | None = None
+
+
 class ScanReport(BaseModel):
     scan_id: str
     status: str
@@ -140,6 +215,14 @@ class ScanReport(BaseModel):
     url_intelligence: URLIntelligenceReport
     visual_intelligence: VisualIntelligenceReport
     behavioral_intelligence: BehavioralReport
+    # Phase 9 extended fields
+    preliminary_url_risk: dict[str, Any] | None = None
+    tls_evidence: dict[str, Any] | None = None
+    redirect_intelligence: dict[str, Any] | None = None
+    model_availability: list[dict[str, Any]] = Field(default_factory=list)
+    scan_stages: dict[str, Any] = Field(default_factory=dict)
+    mitigating_evidence: list[str] = Field(default_factory=list)
+    unavailable_evidence: list[str] = Field(default_factory=list)
     explanation: str | None = None
     disclaimer: str | None = None
 
@@ -158,3 +241,4 @@ class BrandAsset(BaseModel):
     primary_domain: str
     authorized_domains: list[str]
     logo_count: int
+
